@@ -1,0 +1,219 @@
+{
+    "Layer" : "FreeEntities",
+    "ParentId" : "Beings/BaseBeing",
+    "PreviewIcon" : "Icons/Color/PreviewHuman01",
+    "StasisWakeUpChance" : 0.9,
+    "Components" : [
+        {
+            "Component" : "Labor",
+            "Properties" : [
+                { "Key" : "MaxHoursForOneTask", "Int" : 24 }
+            ]
+        },
+        {
+            "Component" : "Processable",
+            "Properties" : [
+                { "Key" : "Type", "String" : "NutrientSource" },
+                { "Key" : "Level", "Int" : 1 },
+                { "Key" : "ProcessingTimeHours", "Float" : 4 },
+                { "Key" : "EnergyCost", "Int" : 10 },
+                { "Key" : "AutoSpawn", "Bool" : false },
+                { "Key" : "DropAmountOnDestroy", "Float" : 0.8 },
+                { "Key" : "AdIcon", "String" : "Icons/Color/Knife" },
+                { "Key" : "NotBatchable", "Bool" : true },
+                {
+                    "Key" : "Output",
+                    "RawMaterials" : [
+                        { "TypeId" : "Protein", "StackSize" : 15 },
+                        { "TypeId" : "Carbon", "StackSize" : 5 },
+                        { "TypeId" : "Water" ,"StackSize" : 10 }
+                    ]
+                }
+            ]
+        },
+        { "Component" : "ExpeditionMember" },
+        { "Component" : "CrawlerPrey" },
+        {
+            "Component" : "Worker",
+            "Properties" : [
+                { "Key" : "IsControllable", "Bool" : false }
+            ]
+        },
+        {
+            "Component" : "Brain",
+            "Properties" : [
+                { "Key" : "IsSelfPreserving", "Bool" : true },
+                { "Key" : "ReactsToEmergencySiren", "Bool" : true },
+                { "Key" : "IsRoamAnchored", "Bool" : false },
+                { "Key" : "RoamChance", "Float" : 0.8 },
+                { "Key" : "TaskVariation", "Int" : 2 }
+            ]
+        },
+        {
+            "Component" : "BeingNameText" ,
+            "Properties" : [
+                { "Key" : "Offset", "Vector2" : { "x" : 0, "y" : -0.5 } }
+            ]
+        },
+        {
+            "Component" : "Equipment",
+            "Properties" : [
+                { "Key" : "CanAffectSafety", "Bool" : true },
+                { "Key" : "Slots", "StringSet" : [ "Body", "BodyCasual", "Head", "HeadCasual", "Weapon" ] }
+            ]
+        },
+        {
+            "Component" : "Flammable",
+            "Properties" : [
+                { "Key" : "DamageFireChance", "Float" : 0 }
+            ]
+        },
+        { "Component" : "Mood" },
+        {
+            "Component" : "Persona",
+            "Properties" : [
+                { "Key" : "Species", "String" : "Human" }
+            ]
+        },
+        {
+            "Component" : "BeingLooks",
+            "Properties" : [
+                { "Key" : "BaseOffset", "Float" : -0.4 },
+                { "Key" : "BarOffset", "Vector2" : { "x" : 0, "y" : -0.33} },
+                { "Key" : "SelectOffset", "Vector2" : { "x" : 0, "y" : -0.2} },
+                { "Key" : "SelectSize", "Vector2" : { "x" : 0.7, "y" : 0.7} },
+                { "Key" : "ThoughtBubbleOffset", "Vector2" : { "x" : 0.4, "y" : 0.3} },
+                { "Key" : "HasHorizontal", "Bool" : true },
+                { "Key" : "Cache", "Bool" : true },
+                {
+                    "Key" : "Parts",
+                    "StringSet" : [
+                        "Body",
+                        "Clothing",
+                        "Weapon",
+                        "Head",
+                        "Hair",
+                        "Hat"
+                    ]
+                },
+                {
+                    "Key" : "PositionFilters",
+                    "StringSet" : [
+                        null,
+                        null,
+                        "WeaponJitter",
+                        null,
+                        null,
+                        null
+                    ]
+                },
+                {
+                    "Key" : "WeaponOffsets",
+                    "Vector2Set" : [
+                        { "x" : -0.2, "y" : -0.1 },
+                        { "x" : -0.1, "y" : 0.15 },
+                        { "x" : 0.15, "y" : 0.15 },
+                        { "x" : 0.1, "y" : -0.1 }
+                    ]
+                },
+                {
+                    "Key" : "Offsets",
+                    "Vector2Set" : [
+                        { "x" : 0, "y" : 0 },
+                        { "x" : 0, "y" : 0 },
+                        { "x" : 0, "y" : 0 },
+                        { "x" : 0, "y" : 0 },
+                        { "x" : 0, "y" : 0 },
+                        { "x" : 0, "y" : 0 }
+                    ]
+                },
+                {
+                    "Key" : "Scales",
+                    "FloatSet" : [
+                        1,
+                        1,
+                        1,
+                        1,
+                        1,
+                        1
+                    ]
+                }
+            ]
+        },
+        {
+            "Component" : "Navigation",
+            "Properties" : [
+                { "Key" : "MaxSpeed", "Float" : 0.7 },
+                { "Key" : "Acceleration", "Float" : 0.25 }
+            ]
+        },
+        {
+            "Component" : "Skills",
+            "Properties" : [
+                {
+                    "Key" : "Skills",
+                    "StringSet" : [
+                        "Construction",
+                        "Repair",
+                        "Science",
+                        "Cleaning",
+                        "Operate",
+                        "Mining",
+                        "Artistic"
+                    ]
+                },
+                {
+                    "Key" : "MaxSkillLevels",
+                    "IntSet" : [
+                        10,
+                        10,
+                        10,
+                        10,
+                        10,
+                        10,
+                        10
+                    ]
+                },
+                {
+                    "Key" : "InitialSkillRanges",
+                    "StringSet" : [
+                        "1-4",
+                        "1-4",
+                        "4-9",
+                        "1-9",
+                        "1-5",
+                        "1-5",
+                        "1-4"
+                    ]
+                }
+            ]
+        },
+        {
+            "Component" : "Health",
+            "Properties" : [
+                { "Key" : "HealingAction", "String" : "Heal" }
+            ]
+        },
+        {
+            "Component" : "Needs",
+            "Properties" : [
+                { "Key" : "EnergyNeed", "String" : "Hunger" },
+                {
+                    "Key" : "Needs",
+                    "StringSet" : [
+                        "Hunger",
+                        "Oxygen",
+                        "Purpose",
+                        "Sleep",
+                        "Toilet",
+                        "Shower",
+                        "Stress",
+                        "Aesthetics",
+                        "Fun",
+                        "Rest"
+                    ]
+                }
+            ]
+        }
+    ]
+}

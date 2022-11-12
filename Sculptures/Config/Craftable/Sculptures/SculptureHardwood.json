@@ -1,0 +1,10 @@
+{
+    "Level": 1,
+    "Type": "Sculptures",
+    "Ingredients": [
+        { "TypeId" : "Hardwood", "StackSize" : 1 }
+    ],
+    "ProductDefId": "Obj/Materials/SculptureHardwood",
+    "ProductionTimeHours": 1.0,
+    "EnergyCost": 1.0
+}

@@ -1,0 +1,9 @@
+{
+    "Id" : "SculptureLimestone",
+    "IsComposite" : true,
+    "NameKey" : "material.SculptureLimestone",
+    "IconId" : "Obj/Materials/Limestone",
+    "Group" : "Sculptures",
+    "EnergyOutput" : 400.0,
+    "Rarity" : 1
+}

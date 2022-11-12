@@ -1,0 +1,44 @@
+{
+    "Id" : "MetalRichPlanet",
+    "CompatibleTypes" : [ "Planet" ],
+    "TypeSpawnRates" : [ 0.5 ],
+    "AlienLifeChance" : 0.001,
+    "MerchantChance" : 0.1,
+    "AnomalyChance" : 0.005,
+
+    "Materials" : [
+        "Coal",
+        "Iron",
+        "Copper",
+        "Rock",
+        "Lithium",
+        "Silicon",
+        "Titanium",
+        "Quartz"
+    ],
+
+    "MinMaterials" : 3,
+    "MaxMaterials" : 7,
+
+    "MaterialSpawnRates" : [
+        0.3,
+        0.75,
+        0.7,
+        0.4,
+        0.1,
+        0.5,
+        0.1,
+        0.1
+    ],
+
+    "MaterialAmounts" : [
+        { "x" : 50, "y" : 100 },
+        { "x" : 100, "y" : 500 },
+        { "x" : 75, "y" : 250 },
+        { "x" : 50, "y" : 100 },
+        { "x" : 25, "y" : 75 },
+        { "x" : 25, "y" : 75 },
+        { "x" : 50, "y" : 150 },
+        { "x" : 25, "y" : 75 }
+    ]
+}

@@ -1,0 +1,9 @@
+{
+    "Id" : "Sculptures",
+    "SteamWorkshop" : false,
+    "Name" : "Sculptures",
+    "Description" : "Sculptures",
+    "ModVersion" : "1.0.0",
+    "GameVersion" : "0.6.115",
+    "Dependencies" : [ "Core" ]
+}

@@ -1,0 +1,14 @@
+{
+    "Id" : "Plain",
+    "Rarity": 0.5,
+    "CraftingChancePoints": [
+    	0, 10,
+    	0.2, 25,
+    	0.4, 75,
+    	0.6, 50,
+    	0.8, 25,
+    	1.0, 10
+    ],
+    "Aesthetics": 20,
+    "HasHeight": true
+}

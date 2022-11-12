@@ -1,0 +1,54 @@
+{
+    "ToolPath" : "Sculptures",
+    "ResearchValue" : 0,
+    "Layer" : "Objects",
+    "ParentId" : "BaseTile",
+    "IsAbstract" : true,
+    "Researchable" : {
+        "Prerequisites" : [ "Research/Sculpting" ]
+    },
+    "Components" : [
+        {
+            "Component" : "TileTransform",
+            "Properties" : [
+                { "Key" : "IsRotatable", "Bool" : true }
+            ]
+        },
+        {
+            "Component" : "Damageable",
+            "Properties" : [
+                { "Key" : "MaxWear", "Int" : 3000 }
+            ]
+        },
+        {
+            "Component" : "Flammable",
+            "Properties" : [
+                { "Key" : "DamageFireChance", "Float" : 0 }
+            ]
+        },
+        {
+            "Component" : "TileGraphics",
+            "Properties" : [
+                { "Key" : "Type", "String": "Object" }
+            ]
+        },
+        {
+            "Component" : "Passability",
+            "Properties" : [
+                { "Key" : "IsPassable", "Bool" : true },
+                { "Key" : "IsWalkable", "Bool" : true },
+                { "Key" : "Difficulty", "Float" : 0.5 }
+            ]
+        },
+        { "Component" : "Reinstallable" },
+        {
+            "Component" : "Constructable",
+            "Properties" : [
+                { "Key" : "WorkAmount", "Int" : 100 },
+                { "Key" : "CanDragRow", "Bool" : true },
+                { "Key" : "SkillChecks", "StringSet": ["Construction" ] },
+                { "Key" : "SkillCheckAmounts", "IntSet" : [ 1 ] }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,58 @@
+{
+    "ToolPath" : "Furniture/Decorations",
+    "ResearchValue" : 0,
+    "Layer" : "Objects",
+    "ParentId" : "Objects/Furniture/BaseSculpture",
+    "IsAbstract" : true,
+    "Researchable" : {
+        "Prerequisites" : [
+            "Research/Sculpting"
+        ]
+    },
+    "Components" : [
+        {
+            "Component" : "TileTransform",
+            "Properties" : [
+                { "Key" : "Width", "Int" : 1 },
+                { "Key" : "Height", "Int" : 1 }
+            ]
+        },
+        {
+            "Component" : "Damageable",
+            "Properties" : [
+                { "Key" : "MaxWear", "Int" : 5000 }
+            ]
+        },
+        {
+            "Component" : "TileGraphics",
+            "Properties" : [
+                { "Key" : "Type", "String": "Object" },
+                { "Key" : "Graphic", "String": "Objects/Furniture/SculptureHardwood" }
+            ]
+        },
+        {
+            "Component" : "Aesthetics",
+            "Properties" : [
+                { "Key" : "Aesthetics", "Float" : 15 }
+            ]
+        },
+        {
+            "Component" : "Constructable",
+            "Properties" : [
+                { "Key" : "WorkAmount", "Int" : 50 },
+                { "Key" : "CanDragRow", "Bool" : true },
+                {
+                    "Key" : "Contents",
+                    "RawMaterials" : [
+                        { "TypeId" : "SculptureHardwood", "StackSize" : 1 },
+                        { "TypeId" : "Steel", "StackSize" : 1 }
+                    ]
+                },
+                { "Key" : "SkillChecks", "StringSet": ["Construction"] },
+                { "Key" : "SkillCheckAmounts", "IntSet" : [ 1 ] },
+                { "Key" : "Promises", "StringSet": [ "Aesthetics" ] },
+                { "Key" : "PromiseAmounts", "IntSet" : [ 10 ] }
+            ]
+        }
+    ]
+}

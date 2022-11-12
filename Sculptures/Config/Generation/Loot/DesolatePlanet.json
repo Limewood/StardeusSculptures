@@ -1,0 +1,32 @@
+{
+    "Id" : "DesolatePlanet",
+    "CompatibleTypes" : [ "Planet" ],
+    "TypeSpawnRates" : [ 0.05 ],
+    "AlienLifeChance" : 0.005,
+    "MerchantChance" : 0.01,
+    "AnomalyChance" : 0.0005,
+
+    "Materials" : [
+        "Iron",
+        "Copper",
+        "Silicon",
+        "Rock"
+    ],
+
+    "MinMaterials" : 1,
+    "MaxMaterials" : 3,
+
+    "MaterialSpawnRates" : [
+        0.5,
+        0.5,
+        0.5,
+        0.5
+    ],
+
+    "MaterialAmounts" : [
+        { "x" : 100, "y" : 300 },
+        { "x" : 50, "y" : 150 },
+        { "x" : 25, "y" : 50 },
+        { "x" : 150, "y" : 300 }
+    ]
+}

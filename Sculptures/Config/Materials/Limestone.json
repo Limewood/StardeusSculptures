@@ -1,0 +1,9 @@
+{
+    "Id" : "Limestone",
+    "IsComposite" : true,
+    "NameKey" : "material.Limestone",
+    "IconId" : "Obj/Materials/Limestone",
+    "Property" : "Solid",
+    "EnergyOutput" : 300.0,
+    "Rarity" : 5
+}

@@ -1,0 +1,15 @@
+{
+    "Id" : "Research/Sculpting",
+    "Tier" : 2,
+    "IsAbstract" : true,
+    "PreviewIcon" : "Objects/Furniture/ChairWood_D",
+    "Researchable" : {
+        "IsTreeNode" : true,
+        "Energy" : 50,
+        "Memory" : 8,
+        "Storage" : 12,
+        "Prerequisites" : [
+            "Research/Furniture"
+        ]
+    }
+}

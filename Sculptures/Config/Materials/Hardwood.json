@@ -1,0 +1,9 @@
+{
+    "Id" : "Hardwood",
+    "IsComposite" : true,
+    "NameKey" : "material.Hardwood",
+    "IconId" : "Obj/Materials/Hardwood",
+    "Property" : "Solid",
+    "EnergyOutput" : 400.0,
+    "Rarity" : 5
+}
