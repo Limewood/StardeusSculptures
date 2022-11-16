@@ -12,10 +12,8 @@ using Game.Utils;
 using KL.Utils;
 using UnityEngine;
 
-namespace Sculptures.AI.Recreation
-{
-	public sealed class RecSculpt : RecreationActivity
-	{
+namespace Sculptures.AI.Recreation{
+	public sealed class RecSculpt : RecreationActivity{
 		public const string Id = "RecSculpt";
 
 		protected override string Icon => "Icons/Color/Sculpt";
@@ -25,49 +23,25 @@ namespace Sculptures.AI.Recreation
 		protected override string ActionType => ActSculpt.ActType;
 
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-		private static void Register()
-		{
+		private static void Register() {
 			RecreationActivity.Add(Id, new RecSculpt());
 		}
 
-		public override bool IsAvailableFor(Being being, out float priority)
-		{
+		public override bool IsAvailableFor(Being being, out float priority) {
 			priority = 0f;
-			D.Warn("RecSculpt, IsAvailableFor " + being);
-			HashSet<int> blacklist = null;
-			Slot slot;
-			while (true)
-			{
-				slot = being.S.Sys.Slots.FindForDesignation<ISculptingProvider>(being, SculpturesMod.SlotDesignationSculpting, blacklist, out var obj);
-				D.Warn("Slot: " + slot);
-				if (slot == null)
-				{
-					return false;
+			if (being.S.Sys.Slots.HasFreeFor(SculpturesMod.SlotDesignationSculpting, being)) {
+				priority = 100f - being.Needs.GetNeed(NeedId.Stress).Value;
+				priority += 100f - being.Needs.GetNeed(NeedId.Fun).Value;
+				// Add to priority if Artistic trait
+				if (being.Traits.HasTrait(TraitCreative.Id)) {
+					priority += 100f;
 				}
-				// Check if device is available
-				D.Warn("Available: " + obj.Available);
-				if (!obj.Available)
-				{
-					if (blacklist == null)
-					{
-						blacklist = new HashSet<int>();
-					}
-					blacklist.Add(obj.EntityId);
-				} else {
-					break;
-				}
+				return true;
 			}
-			priority = 100f - being.Needs.GetNeed(NeedId.Stress).Value;
-			priority += 100f - being.Needs.GetNeed(NeedId.Fun).Value;
-			// Add to priority if Artistic trait
-			if (being.Traits.HasTrait(TraitCreative.Id)) {
-				priority += 100f;
-			}
-			return true;
+			return false;
 		}
 
-		protected override void PostProcessAd(Advert ad)
-		{
+		protected override void PostProcessAd(Advert ad) {
 			ad.WithSkillCheck(SculpturesMod.SkillIdArtistic, 1)
 				.WithPromises(new Reward[2] {
 					new Reward {

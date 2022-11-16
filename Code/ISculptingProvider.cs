@@ -7,8 +7,6 @@ namespace Sculptures.Components
 	{
 		int WorkSpot { get; }
 
-		bool Available { get; }
-
 		void BeginSculpting(Being worker);
 
 		bool Sculpt(Being worker);

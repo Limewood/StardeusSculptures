@@ -1,9 +1,0 @@
-{
-    "Id" : "SculptureHardwood",
-    "IsComposite" : true,
-    "NameKey" : "material.SculptureHardwood",
-    "IconId" : "Obj/Materials/Hardwood",
-    "Group" : "Sculptures",
-    "EnergyOutput" : 400.0,
-    "Rarity" : 1
-}

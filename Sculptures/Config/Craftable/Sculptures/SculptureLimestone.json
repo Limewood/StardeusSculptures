@@ -2,9 +2,10 @@
     "Level": 1,
     "Type": "Sculptures",
     "Ingredients": [
-        { "TypeId" : "Limestone", "StackSize" : 1 }
+        { "TypeId" : "Limestone", "StackSize" : 1 },
+        { "TypeId" : "Steel", "StackSize" : 1 }
     ],
-    "ProductDefId": "Obj/Materials/SculptureLimestone",
+    "ProductDefId": "Objects/Furniture/SculptureLimestone",
     "ProductionTimeHours": 24.0,
     "EnergyCost": 3.0
 }

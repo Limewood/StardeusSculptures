@@ -24,6 +24,9 @@
             ]
         },
         {
+            "Component" : "CreatorInfo"
+        },
+        {
             "Component" : "TileGraphics",
             "Properties" : [
                 { "Key" : "Type", "String": "Object" },
@@ -44,7 +47,7 @@
                 {
                     "Key" : "Contents",
                     "RawMaterials" : [
-                        { "TypeId" : "SculptureLimestone", "StackSize" : 1 },
+                        { "TypeId" : "Limestone", "StackSize" : 1 },
                         { "TypeId" : "Steel", "StackSize" : 1 }
                     ]
                 },

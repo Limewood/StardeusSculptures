@@ -11,11 +11,9 @@ using KL.Collections;
 using KL.Utils;
 using UnityEngine;
 
-namespace Sculptures.Constants
-{
+namespace Sculptures.Constants {
 	[Serializable]
-	public static class SculptureQualities
-	{
+	public static class SculptureQualities {
 		public static readonly Dictionary<string, SculptureQuality> All = new Dictionary<string, SculptureQuality>();
 
 		private static bool hasLoaded;
@@ -24,36 +22,29 @@ namespace Sculptures.Constants
         private static readonly string Simple = "Simple";
 
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-		private static void Init()
-		{
+		private static void Init() {
 			All.Clear();
 			hasLoaded = false;
 			hasLoadedVariations = false;
 		}
 
-		public static void Load()
-		{
-			if (hasLoaded)
-			{
+		public static void Load() {
+			if (hasLoaded) {
 				return;
 			}
 			hasLoaded = true;
 			List<SculptureQuality> list = The.ModLoader.LoadObjects<SculptureQuality>("Config/SculptureQualities");
             SculptureQuality quality;
-			for (int i = 0; i < list.Count; i++)
-			{
+			for (int i = 0; i < list.Count; i++) {
 				quality = list[i];
-				if (All.PutGet(quality.Id, quality) != null)
-				{
-					D.Err("SculptureQualities.All already has quality with same id: {0}!", quality.Id);
+				if (All.PutGet(quality.Id, quality) != null) {
+					D.Warn("SculptureQualities.All already has quality with same id: {0}!", quality.Id);
 				}
 			}
 		}
 
-		public static SculptureQuality Get(string id)
-		{
-			if (id == null)
-			{
+		public static SculptureQuality Get(string id) {
+			if (id == null) {
 				D.Err("Getting sculpture quality by id null");
 				id = Simple;
 			}
@@ -63,10 +54,8 @@ namespace Sculptures.Constants
 			return quality;
 		}
 
-		// TODO Load earlier - user ModLoader to load config/materials for sculptures
-		// and iterate over like now, to create variations
-		public static void LoadVariations()
-		{
+		// Load sculptures types and create tile variations for qualities
+		public static void LoadVariations() {
 			if (hasLoadedVariations) {
 				return;
 			}
@@ -80,15 +69,7 @@ namespace Sculptures.Constants
 			Dictionary<string, SculptureQuality> qualities = All;
 			D.Warn("Sculpture qualities: " + qualities.Count);
 			foreach (SculptureType type in types) {
-				string sculptureType = "Sculpture" + type.Id;
-				Def materialDef = The.Defs.TryGet("Obj/Materials/" + sculptureType);
-				if (materialDef == null) {
-					D.Err("Definition for sculpture material type {0} could not be found!", type.Id);
-					continue;
-				}
-				D.Warn("Load material variations for " + materialDef.Id);
-				string baseGraphic = materialDef.ComponentConfigFor("ObjGraphics").GetString("Graphic");
-				Def constructableDef = The.Defs.TryGet("Objects/Furniture/" + sculptureType);
+				Def constructableDef = The.Defs.TryGet("Objects/Furniture/Sculpture" + type.Id);
 				if (constructableDef == null) {
 					D.Err("Definition for sculpture constructable type {0} could not be found!", type.Id);
 					continue;
@@ -96,42 +77,11 @@ namespace Sculptures.Constants
 				D.Warn("Load constructable variations for " + constructableDef.Id);
 				string constructableGraphic = constructableDef.ComponentConfigFor("TileGraphics").GetString("Graphic");
 				foreach (SculptureQuality quality in qualities.Values) {
-					// Create variations for sculpture materials
-					string variationId = WithQuality(materialDef.Id, quality);
-					string matType = WithQuality(sculptureType, quality);
-					string graphic = WithQuality(baseGraphic, quality);
-					D.Warn("Variation id: " + variationId);
-					Def variation = materialDef.CreateVariation(variationId);
-					variation.ComponentConfigFor("UnstoredMat").SetProperty(new SerializableProperty
-					{
-						Key = "Type",
-						String = matType
-					});
-					variation.ComponentConfigFor("ObjGraphics").SetProperty(new SerializableProperty
-					{
-						Key = "Graphic",
-						String = graphic
-					});
-					variation.NameKey = WithQuality(materialDef.NameKey, quality, true);
-					The.Defs.Set(variation);
-					MatType.AddRuntime(variation.MatType = new MatType
-						{
-							Id = matType,
-							DefId = variationId,
-							Def = variation,
-							IconId = graphic,
-							// IconTint = item.Color,
-							Property = "Solid",
-							Group = "Sculptures",
-							EnergyOutput = 400f,
-							IsComposite = true,
-							Rarity = quality.Rarity
-						});
-
 					// Create variations for constructable sculptures
-					variationId = WithQuality(constructableDef.Id, quality);
-					graphic = WithQuality(constructableGraphic, quality);
-					variation = constructableDef.CreateVariation(variationId);
+					string variationId = WithQuality(constructableDef.Id, quality);
+					D.Warn("Variation id: " + variationId);
+					string graphic = WithQuality(constructableGraphic, quality);
+					Def variation = constructableDef.CreateVariation(variationId);
 					variation.ResearchValue = 1;
 					variation.IsAbstract = false;
 					variation.LayerId = WorldLayer.ToId(variation.Layer);
@@ -156,7 +106,7 @@ namespace Sculptures.Constants
 						Key = "Contents",
 						RawMaterials = new Mat[2] {
 							new Mat {
-								TypeId = matType,
+								TypeId = type.Material,
 								StackSize = 1
 							},
 							new Mat {
@@ -178,6 +128,17 @@ namespace Sculptures.Constants
 
 		private static string WithQuality(string name, SculptureQuality quality, bool lowerCase) {
 			return name + "_" + (lowerCase ? quality.Id.ToLower() : quality.Id);
+		}
+
+		public static int GetVariationsCount(GameState state, Def baseDef) {
+			int num = state.CountByDef(baseDef);
+			if (!baseDef.HasVariations) {
+				return num;
+			}
+			foreach (Def def in baseDef.Variations) {
+				num += state.CountByDef(def);
+			}
+			return num;
 		}
     }
 }

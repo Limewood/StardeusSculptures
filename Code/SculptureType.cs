@@ -9,6 +9,8 @@ namespace Sculptures.Constants
 	{
 		public string Id;
 
+		public string Material;
+
 		private string nameT;
 
 		public string NameT => nameT ?? (nameT = ("sculpture.type." + Id.ToLower()).T());

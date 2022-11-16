@@ -4,6 +4,7 @@ using Sculptures.Components;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Game;
 using Game.AI;
 using Game.Commands;
@@ -16,13 +17,14 @@ using Game.Systems.Energy;
 using Game.UI;
 using Game.Utils;
 using KL.Collections;
+using KL.Grid;
 using KL.Randomness;
 using KL.Utils;
 using UnityEngine;
 
 namespace Sculptures.Components
 {
-	public sealed class SculptorComp : BaseSlotsComp<SculptorComp>, IUIDataProvider, IEnergyConsumer, IComponent, IAdvertProvider, ICopyableComp, IAdvertPriorityListener, IUIContextMenuProvider, IRelocatable, IAfterInitDef, IMatRequester, ISculptingProvider
+	public sealed class SculptorComp : BaseSlotsComp<SculptorComp>, IUIDataProvider, IEnergyConsumer, IComponent, IAdvertProvider, ICopyableComp, IAdvertPriorityListener, IUIContextMenuProvider, IRelocatable, IAfterInitDef, IMatRequester, ISculptingProvider, ISlots
 	{
 		private int level;
 
@@ -46,9 +48,13 @@ namespace Sculptures.Components
 
 		private float craftingSpeedMultiplier;
 
+		private bool isStorageFullWarningsOn;
+
 		public HashSet<string> CompatibleTypes;
 
 		private UDB priorityBlock;
+
+		private UDB storageFullBlock;
 
 		private Mat[] ingredients;
 
@@ -62,10 +68,6 @@ namespace Sculptures.Components
 
 		private UDB demandBlock;
 
-		// private UDB demandTypeBlock;
-
-		private UDB amountBlock;
-
 		private readonly Dictionary<MatType, UDB> ingredientBlocks = new Dictionary<MatType, UDB>();
 
 		private ColorChoice colChoice;
@@ -76,11 +78,29 @@ namespace Sculptures.Components
 
 		private bool showingUnconfiguredIcon;
 
-		private bool showingGoalReachedIcon;
+		private bool showingStorageFullIcon;
 
 		private bool isSculpting = false;
 
 		private Vector2[] offsets;
+
+		private Vector2[] sculptureStorageOffsets;
+
+		private EventNotification storageFullNotification;
+
+		private string storageFullGroupId;
+
+		private string storageFullTitle;
+
+		private Tile producedSculpture;
+
+		private float averageEfficiency;
+
+		private float startedSculpting;
+
+		private List<int> sculptorIds;
+		
+		private List<string> sculptorNames;
 
 		public bool IsConsumerActive => true;
 
@@ -114,8 +134,19 @@ namespace Sculptures.Components
 
 		public Facing.Type SpotRotation => Facing.Opposite(Tile.Transform.Rotation);
 
-		public bool Available => Demand != null && !IsMissingMaterials();
+		private static readonly StringBuilder tooltipSB = new StringBuilder();
 
+		public override bool IsAvailable
+		{
+			get
+			{
+				if (Tile.IsConstructed)
+				{
+					return !Tile.IsPendingRemoval && Demand != null && !IsMissingMaterials() && !showingStorageFullIcon;
+				}
+				return false;
+			}
+		}
 
 		public MatRequest NextMissingMat
 		{
@@ -138,16 +169,15 @@ namespace Sculptures.Components
 		}
 
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-		private static void Register()
-		{
+		private static void Register() {
 			BaseComponent<SculptorComp>.AddComponentPrototype(new SculptorComp());
 		}
 
-		protected override void OnConfig()
-		{
+		protected override void OnConfig() {
 			deficitEv = new MatDeficitEventHolder(base.Entity, this);
 			level = base.Config.GetInt("Level");
 			craftPriority = base.Config.GetInt("DefaultPriority", 5);
+			isStorageFullWarningsOn = base.Config.GetBool("StorageFullWarnDefault", def: true);
 			CompatibleTypes = new HashSet<string>(base.Config.GetStringSet("CompatibleTypes"));
 			string @string = base.Config.GetString("UIItemIcon", null);
 			craftingSpeedMultiplier = base.Config.GetFloat("SpeedMultiplier", 1f);
@@ -162,21 +192,30 @@ namespace Sculptures.Components
 			progressBarKey = base.Config.GetString("ProgressBarKey", "printing.item");
 			craftKey = base.Config.GetString("CraftKey", "print");
 			offsets = base.Config.GetVector2Set("OperatorOffsets");
+			sculptureStorageOffsets = base.Config.GetVector2Set("SculptureStorageOffsets");
 			OnConfigSlots();
 		}
 
-		public override void OnSave()
-		{
+		public override void OnSave() {
 			ComponentData orCreateData = GetOrCreateData();
 			orCreateData.SetFloat("Progress", Progress);
 			orCreateData.SetInt("Priority", craftPriority);
 			orCreateData.SetInt("TotalProd", TotalProduced);
+			orCreateData.SetBool("StorageFullWarn", isStorageFullWarningsOn);
 			CraftingDemand.Save(Demand, orCreateData);
 			if (Demand != null)
 			{
 				deficitEv.Save(orCreateData);
 			}
 			orCreateData.SetMats("Ingredients", ingredients);
+			if (producedSculpture != null) {
+				// Save produced sculpture because of full storage
+				orCreateData.SetString("ProducedSculpture", producedSculpture.Definition.Id);
+			}
+			orCreateData.SetFloat("AverageEfficiency", averageEfficiency);
+			orCreateData.SetFloat("StartedSculpting", startedSculpting);
+			orCreateData.SetIntSet("SculptorIds", sculptorIds.ToArray());
+			orCreateData.SetStringSet("SculptorNames", sculptorNames.ToArray());
 		}
 
 		protected override void OnLoad(ComponentData data)
@@ -195,9 +234,25 @@ namespace Sculptures.Components
 					VerifyIngredients();
 				}
 			}
+			isStorageFullWarningsOn = data.GetBool("StorageFullWarn", isStorageFullWarningsOn);
 			craftPriority = data.GetInt("Priority", craftPriority);
 			TotalProduced = data.GetInt("TotalProd", 0);
 			Progress = data.GetFloat("Progress", 0f);
+			string producedSculptureDefId = data.GetString("ProducedSculpture", null);
+			if (producedSculptureDefId != null) {
+				Def def = The.Defs.TryGet(producedSculptureDefId);
+				producedSculpture = EntityUtils.CreatePrototype<Tile>(def);
+			}
+			averageEfficiency = data.GetFloat("AverageEfficiency", 0);
+			startedSculpting = data.GetFloat("StartedSculpting", 0);
+			int[] sculptorIdsData = data.GetIntSet("SculptorIds", null);
+			if (sculptorIdsData != null) {
+				sculptorIds = new List<int>(sculptorIdsData);
+			}
+			string[] sculptorNamesData = data.GetStringSet("SculptorNames", null);
+			if (sculptorNamesData != null) {
+				sculptorNames = new List<string>(sculptorNamesData);
+			}
 		}
 
 		private void VerifyIngredients()
@@ -277,59 +332,43 @@ namespace Sculptures.Components
 				{
 					dataBlock.UpdateIcon(uiItemIcon);
 					dataBlock.UpdateTitle(progressBarKey.T(Demand.CraftableItemName));
-					dataBlock.UpdateTooltip(Demand.Craftable.ProductDef.ExtendedTooltip(S));
+					dataBlock.UpdateTooltip(DefTooltip(Demand.Craftable.ProductDef));
 				}
 			}
 			prodBlock?.UpdateText(Units.XNum(TotalProduced));
-			if (Demand == null || demandBlock == null || (!demandBlock.IsShowing && wasUpdated))
-			{
+			if (Demand == null || demandBlock == null || (!demandBlock.IsShowing && wasUpdated)) {
 				return;
 			}
 			prodCurBlock.UpdateText(Units.XNum(Demand.AmountProducedThis));
 			demandBlock.UpdateValue(Progress);
-			// demandTypeBlock.UpdateTitle(Demand.TypeName);
-			// demandTypeBlock.UpdateTooltip(Demand.TypeTooltip);
-			if (amountBlock != null && (amountBlock.IsShowing || !wasUpdated))
-			{
-				amountBlock.UpdateValue(Demand.AmountProduced);
-				// amountBlock.UpdateRange(0f, Demand.AmountWanted);
-			}
 			Mat[] array = ingredients;
-			for (int i = 0; i < array.Length; i++)
-			{
+			for (int i = 0; i < array.Length; i++) {
 				Mat mat = array[i];
 				UDB uDB2 = ingredientBlocks.Get(mat.Type, null);
-				if (uDB2 == null)
-				{
+				if (uDB2 == null) {
 					// D.Err("Updating up block mismatch ingredients. Expected: {0}, Actual: {1}", D.Dump(ingredients), D.Dump(ingredientBlocks));
 				}
-				else
-				{
+				else {
 					uDB2.UpdateValue(mat.StackSize);
 				}
 			}
 		}
 
-		public override bool IsCompatibleWith(Being being)
-		{
-			Debug.Log("Is sculpturcomp compatible with " + being.Persona.Name + " artistic skill " + being.Skills.GetSkill(SculpturesMod.SkillIdArtistic));
+		public override bool IsCompatibleWith(Being being) {
 			return being.Skills.GetSkill(SculpturesMod.SkillIdArtistic) != null;
 		}
 
-		public override void OnLateReady(bool wasLoaded)
-		{
+		public override void OnLateReady(bool wasLoaded) {
 			extraInfo = base.Entity.GetRequiredComponent<ExtraInfoComp>(this);
 			if (wasLoaded)
 			{
 				deficitEv.OnLateReady();
 				UpdateExtraInfo();
 			}
-
-			CreateBeingSlots("Icons/Color/Treadmill", T.WorkoutSlots); // TODO Change to sculpting slot
+			CreateBeingSlots("Icons/Color/Sculpt", "sculpting.slots".T());
 		}
 
-		private void UpdateExtraInfo()
-		{
+		private void UpdateExtraInfo() {
 			if (Demand != null)
 			{
 				extraInfo?.ShowInfoIcon(Demand.Product.Preview, Demand.Product.NameT);
@@ -340,14 +379,12 @@ namespace Sculptures.Components
 			}
 		}
 
-		public override void OnRemove()
-		{
+		public override void OnRemove() {
 			RemoveSlots();
 		}
 
-		private void UpdateProgressBar()
-		{
-			if (Demand != null && (Progress > 0f || !Demand.HasProducedEnough(S)))
+		private void UpdateProgressBar() {
+			if (Demand != null && Progress > 0f)
 			{
 				ShowInfoBar(Game.Constants.Consts.ColorFuelBar, Progress, Progress, 1, progressBarKey.T(Units.Percentage(Progress))).IsPretranslated = true;
 			}
@@ -357,8 +394,7 @@ namespace Sculptures.Components
 			}
 		}
 
-		private List<Craftable> GetCraftableItems()
-		{
+		private List<Craftable> GetCraftableItems() {
 			if (allCraftables == null)
 			{
 				allCraftables = new List<Craftable>();
@@ -367,8 +403,7 @@ namespace Sculptures.Components
 			return allCraftables;
 		}
 
-		private void LoadCraftingOptions(List<UDB> blocks)
-		{
+		private void LoadCraftingOptions(List<UDB> blocks) {
 			availableMaterials.Clear();
 			S.Sys.Inventory.LoadRemainingMaterials(availableMaterials);
 			List<Craftable> craftableItems = GetCraftableItems();
@@ -384,13 +419,10 @@ namespace Sculptures.Components
 					b.WithIconTint(item.UITint);
 					b.WithIconClickFunction(item.ShowManualEntry);
 					b.WithTooltipFunction((UDB _) => ShowProductionChoiceTooltipFor(c, item));
-					// int i = S.Sys.Inventory.CountOf(item);
-					// b.WithText(Units.XNum(i));
 					b.WithText2(craftKey.T());
 					b.WithClickFunction(delegate
 					{
 						SwitchToCrafting(c);
-						// Demand.AmountWanted = S.Sys.Inventory.CountOf(item) + 10;
 						b.NeedsListRebuild = true;
 						UpdateUIBlock(wasUpdated: true);
 					});
@@ -406,86 +438,43 @@ namespace Sculptures.Components
 			}
 		}
 
-		private string ShowProductionChoiceTooltipFor(Craftable c, Def item)
-		{
+		private string ShowProductionChoiceTooltipFor(Craftable c, Def item) {
 			Caches.StringBuilder.Clear();
-			Caches.StringBuilder.Append("available.count".T(S.Sys.Inventory.CountOf(item)));
+			Caches.StringBuilder.Append("available.count".T(SculptureQualities.GetVariationsCount(S, item)));
 			Caches.StringBuilder.AppendFormat("<br>{0}: <b>{1}@{2}</b>", T.ProductionCost, Units.SecondsToShortTime(c.ProductionTimeHours * 3600f), Units.Electricity(c.EnergyCost));
 			Mat[] array = IngredientsFor(c);
 			Caches.StringBuilder.AppendFormat("<br>{0}", T.Ingredients);
 			Mat[] array2 = array;
-			for (int i = 0; i < array2.Length; i++)
-			{
+			for (int i = 0; i < array2.Length; i++) {
 				Mat mat = array2[i];
 				Caches.StringBuilder.AppendFormat("<br> - <b>{0}</b> [{1}]", mat.Type.NameT, Units.XNum(mat.MaxStackSize));
 			}
-			if (c.OutputMultiplier > 1)
-			{
+			if (c.OutputMultiplier > 1) {
 				Caches.StringBuilder.AppendFormat("<br>{0}: <b>{1}</b>", T.OutputMultiplier, Units.XNum(c.OutputMultiplier));
 			}
 			return Caches.StringBuilder.ToString();
 		}
 
-		public void SwitchToCrafting(Craftable craftable)
-		{
-			if (showingUnconfiguredIcon)
-			{
+		public void SwitchToCrafting(Craftable craftable) {
+			if (showingUnconfiguredIcon) {
 				showingUnconfiguredIcon = false;
 				HideInfoIcon();
 			}
 			demandBlock = null;
 			Demand = CraftingDemand.CreateFor(craftable);
-			Demand.Type = CraftingDemand.DemandType.Unlimited;
+			Demand.Type = CraftingDemandType.Unlimited;
 			ingredients = IngredientsFor(craftable);
 			Progress = 0f;
 			extraInfo.ShowInfoIcon(Demand.Product.Preview, Demand.Product.NameT);
 			CheckMissingIngredients(checkIfProducedEnough: true);
 			UpdateExtraInfo();
-			MaybeHintCraftingTargetInventory();
 		}
 
-		private void MaybeHintCraftingTargetInventory()
-		{
-			if (S.Components.FindAllMatching(similarCrafters, IsSimilarCrafterWithDefaultSettings) > 2)
-			{
-				S.Sys.Hint.Show("multi_crafters_with_defaults", optional: false);
-			}
-		}
-
-		private bool IsSimilarCrafterWithDefaultSettings(SculptorComp sculptor)
-		{
-			if (sculptor == this)
-			{
-				return false;
-			}
-			CraftingDemand demand = sculptor.Demand;
-			if (demand == null)
-			{
-				return false;
-			}
-			if (sculptor.entity.DefinitionId != entity.DefinitionId)
-			{
-				return false;
-			}
-			if (demand.craftableId != Demand.craftableId)
-			{
-				return false;
-			}
-			if (demand.Type == CraftingDemand.DemandType.Limit)
-			{
-				return demand.AmountWanted == CraftingDemand.DefaultAmount;
-			}
-			return false;
-		}
-
-		private Mat[] IngredientsFor(Craftable c)
-		{
+		private Mat[] IngredientsFor(Craftable c) {
 			Mat[] array = c.Ingredients;
 			Mat[] array2 = new Mat[array.Length];
-			for (int i = 0; i < array.Length; i++)
-			{
-				array2[i] = new Mat
-				{
+			for (int i = 0; i < array.Length; i++) {
+				array2[i] = new Mat {
 					Type = array[i].Type,
 					MaxStackSize = array[i].StackSize
 				};
@@ -493,12 +482,10 @@ namespace Sculptures.Components
 			return array2;
 		}
 
-		private void BuildIngredientBlocks(List<UDB> blocks)
-		{
+		private void BuildIngredientBlocks(List<UDB> blocks) {
 			ingredientBlocks.Clear();
 			Mat[] array = ingredients;
-			for (int i = 0; i < array.Length; i++)
-			{
+			for (int i = 0; i < array.Length; i++) {
 				Mat mat = array[i];
 				UDB uDB = mat.DataBlock(S, T.Ingredient);
 				ingredientBlocks[mat.Type] = uDB;
@@ -506,97 +493,38 @@ namespace Sculptures.Components
 			}
 		}
 
-		private string DemandTooltip(UDB b)
-		{
-			if (Demand == null || Demand.Product == null)
-			{
-				return null;
-			}
-			return Demand.Product.ExtendedTooltip(S, T.ProducedItem);
+		private string DemandTooltip(UDB b) {
+			return DefTooltip(Demand.Product);
 		}
 
-		private void LoadDemandOptions(List<UDB> blocks)
-		{
-			if (prodCurBlock == null)
-			{
+		private string DefTooltip(Def def) {
+			tooltipSB.Clear();
+			tooltipSB.AppendFormat("<b>{0}</b><br>", "sculptures.created.sculpture".T());
+			tooltipSB.Append("available.count".T(SculptureQualities.GetVariationsCount(S, def)));
+			tooltipSB.AppendFormat("<br><br><b>{0}</b><br>{1}", def.NameT, def.ExtendedDesc);
+			return tooltipSB.ToString();
+		}
+
+		private void LoadDemandOptions(List<UDB> blocks) {
+			if (prodCurBlock == null) {
 				prodCurBlock = UDB.Create(this, UDBT.DText, "Icons/Color/Count", T.CurrentItemsProduced);
 			}
 			prodCurBlock.UpdateText(Units.XNum(Demand.AmountProducedThis));
 			blocks.Add(prodCurBlock);
-			if (demandBlock == null)
-			{
+			if (demandBlock == null) {
 				Def product = Demand.Product;
 				demandBlock = UDB.Create(this, UDBT.IProgress, product.Preview, product.NameT).WithTooltipFunction(DemandTooltip).WithIconClickFunction(product.ShowManualEntry)
 					.AsPercentage()
 					.WithIconTint(product.UITint);
 				int outputMultiplier = Demand.Craftable.OutputMultiplier;
-				if (outputMultiplier > 1)
-				{
+				if (outputMultiplier > 1) {
 					demandBlock.WithText(Units.XNum(outputMultiplier));
 				}
 			}
 			blocks.Add(demandBlock);
 			BuildIngredientBlocks(blocks);
-			// if (demandTypeBlock == null)
-			// {
-			// 	demandTypeBlock = UDB.Create(this, UDBT.DBtn, "Icons/Color/Target", Demand.TypeName).WithClickFunction(ToggleDemandType);
-			// }
-			// blocks.Add(demandTypeBlock);
-			if (Demand.Type != CraftingDemand.DemandType.Unlimited && Demand.Type != 0)
-			{
-				if (amountBlock == null)
-				{
-					amountBlock = UDB.Create(this, UDBT.DPriority, "Icons/Color/Count", T.WantedAmount);
-					string tooltip;
-					string o = The.Bindings.GetBinding(ActionType.ShiftModifier).AllControlGlyphs(out tooltip);
-					amountBlock.WithTooltip("priority.block.shift.tip".T(o));
-					amountBlock.WithClickFunction(delegate
-					{
-						if (The.Bindings.IsPressed(ActionType.ShiftModifier))
-						{
-							Demand.AmountWanted -= 10;
-						}
-						else
-						{
-							Demand.AmountWanted--;
-						}
-						if (Demand.AmountWanted < 0)
-						{
-							Demand.AmountWanted = 0;
-						}
-						if (Demand.AmountWanted >= 0)
-						{
-							UpdateUIBlock(wasUpdated: true);
-						}
-					});
-					amountBlock.WithClick2Function(delegate
-					{
-						if (The.Bindings.IsPressed(ActionType.ShiftModifier))
-						{
-							Demand.AmountWanted += 10;
-						}
-						else
-						{
-							Demand.AmountWanted++;
-						}
-						UpdateUIBlock(wasUpdated: true);
-					});
-				}
-				blocks.Add(amountBlock);
-			}
-			if (Demand.Type == CraftingDemand.DemandType.Custom && Demand.HasProducedEnough(S) && Demand.AmountWanted > 0)
-			{
-				blocks.Add(UDB.Create(this, UDBT.DBtn, "Icons/White/Retry", T.Repeat).WithClickFunction(delegate
-				{
-					Demand.AmountProduced = 0;
-					Progress = 0f;
-					demandBlock.NeedsListRebuild = true;
-					UpdateUIBlock(wasUpdated: true);
-				}));
-			}
 			BuildColorBlock(blocks);
-			if (priorityBlock == null)
-			{
+			if (priorityBlock == null) {
 				priorityBlock = UDB.Create(this, UDBT.IPriority, "Icons/White/Priority", T.TaskPriority).WithRange(0f, 9f).WithValueOf(craftPriority)
 					.WithClickFunction(delegate
 					{
@@ -612,22 +540,52 @@ namespace Sculptures.Components
 					});
 			}
 			blocks.Add(priorityBlock);
-			blocks.Add(UDB.Create(this, UDBT.DBtn, "Icons/Color/Cross", T.StopProducing).WithClickFunction(delegate
-			{
+			if (storageFullBlock == null) {
+				storageFullBlock = UDB.Create(this, UDBT.DTextBtn, null, "sculpturebench.warn_if_storage_full".T()).WithText2(T.Toggle).WithClickFunction(ToggleShowStorageFull);
+			}
+			UpdateStorageFullBlock();
+			blocks.Add(storageFullBlock);
+			blocks.Add(UDB.Create(this, UDBT.DBtn, "Icons/Color/Cross", T.StopProducing).WithClickFunction(delegate {
 				StopProducing();
 				UpdateUIBlock(wasUpdated: true);
 			}));
 			UpdateUIBlock(wasUpdated: false);
 		}
 
-		private void MovePriority(int direction)
-		{
+		private void MovePriority(int direction) {
 			craftPriority = UIUtils.AdjustPriority0To9(craftPriority, direction);
-			if (HasCancellableAd)
-			{
+			if (HasCancellableAd) {
 				CurrentAdvert.WithPriority(craftPriority);
 			}
 			priorityBlock.UpdateValue(craftPriority);
+		}
+
+		private void UpdateStorageFullBlock()
+		{
+			if (isStorageFullWarningsOn)
+			{
+				storageFullBlock.UpdateIcon("Icons/Color/Check");
+				storageFullBlock.UpdateText(T.On);
+			}
+			else
+			{
+				storageFullBlock.UpdateIcon("Icons/Color/Cross");
+				storageFullBlock.UpdateText(T.Off);
+			}
+		}
+
+		private void ToggleShowStorageFull()
+		{
+			if (isStorageFullWarningsOn)
+			{
+				isStorageFullWarningsOn = false;
+				HideStorageFullNotification();
+			}
+			else
+			{
+				isStorageFullWarningsOn = true;
+			}
+			UpdateStorageFullBlock();
 		}
 
 		private void BuildColorBlock(List<UDB> blocks)
@@ -662,6 +620,7 @@ namespace Sculptures.Components
 			colChoice = null;
 			CancelHaulingAd("Stopped production");
 			HideIcon();
+			HideStorageFullNotification();
 			UpdateExtraInfo();
 			deficitEv.Clear();
 			if (Arrays.IsEmpty(ingredients))
@@ -682,35 +641,6 @@ namespace Sculptures.Components
 			}
 			ingredients = null;
 			ingredientBlocks.Clear();
-		}
-
-		private void ToggleDemandType()
-		{
-			switch (Demand.Type)
-			{
-			case CraftingDemand.DemandType.Custom:
-				Demand.Type = CraftingDemand.DemandType.Limit;
-				Demand.AmountProduced = Demand.AmountProducedThis;
-				break;
-			case CraftingDemand.DemandType.Limit:
-				Demand.Type = CraftingDemand.DemandType.Unlimited;
-				Demand.AmountProduced = Demand.AmountProducedThis;
-				break;
-			case CraftingDemand.DemandType.Unlimited:
-				Demand.Type = CraftingDemand.DemandType.One;
-				Demand.AmountProduced = 0;
-				break;
-			case CraftingDemand.DemandType.One:
-				Demand.Type = CraftingDemand.DemandType.Custom;
-				Demand.AmountProduced = Demand.AmountProducedThis;
-				break;
-			default:
-				D.Err("Unhandled demand type: {0}", Demand.Type);
-				Demand.Type = CraftingDemand.DemandType.Custom;
-				break;
-			}
-			demandBlock.NeedsListRebuild = true;
-			UpdateUIBlock(wasUpdated: true);
 		}
 
 		private void CancelHaulingAd(string why)
@@ -735,12 +665,20 @@ namespace Sculptures.Components
 			prodBlock.UpdateText(Units.XNum(TotalProduced));
 			res.Add(prodBlock);
 
-			for (int i = 0; i < slots.Count; i++)
-			{
-				Slot slot = slots[i];
-				res.Add(slot.DataBlock);
-				slot.AddSideReservationUI(this, res);
-			}
+			// TODO Create separate SculptorSlotsComp and show this UI there?
+			// This part goes in UpdateUIBlock
+			// dataBlock.WithRange(0f, slots.Count);
+			// if (dataBlock.UpdateValue(UsedSlotCount))
+			// {
+			// 	dataBlock.NeedsCompleteRebuild = true;
+			// }
+			// This part goes in GetUIDetails
+			// for (int i = 0; i < slots.Count; i++)
+			// {
+			// 	Slot slot = slots[i];
+			// 	res.Add(slot.DataBlock);
+			// 	slot.AddSideReservationUI(this, res);
+			// }
 
 			if (Demand == null)
 			{
@@ -778,7 +716,7 @@ namespace Sculptures.Components
 			if (checkIfProducedEnough)
 			{
 				CraftingDemand demand = Demand;
-				if (demand == null || demand.HasProducedEnough(S))
+				if (demand == null)
 				{
 					return false;
 				}
@@ -805,20 +743,50 @@ namespace Sculptures.Components
 			}
 			if (!flag)
 			{
-				if (showingGoalReachedIcon)
+				if (showingStorageFullIcon)
 				{
 					HideInfoIcon();
-					showingGoalReachedIcon = false;
+					showingStorageFullIcon = false;
 				}
 				return true;
 			}
 			RebuildIngredientsReq();
 			CancelHaulingAd("Has missing ingredients");
-			// Is available for sculpting TODO
 			currentAd = CreateAdvert("Hauling", "Icons/Color/Store", T.HaulIngredients).WithPromise(NeedId.Purpose, 5).MarkAsWork().WithPriority(craftPriority)
 				.AndThen("GatherRawMaterials", T.GatherMaterials, NeedId.Purpose, 5)
 				.Publish();
 			return false;
+		}
+
+		private void ShowStorageFullNotification()
+		{
+			if (!isStorageFullWarningsOn || storageFullNotification != null)
+			{
+				return;
+			}
+			// deficitEv.Clear();
+			if (S.Prefs.GetBool("warn.device.idle", Pref.HWarnDeviceIdle, def: true))
+			{
+				if (storageFullGroupId == null)
+				{
+					storageFullGroupId = "storage_full_" + base.Entity.DefinitionId + "_" + Demand.Product.Id;
+				}
+				if (storageFullTitle == null)
+				{
+					storageFullTitle = "sculpturebench.storage_full_notif".T(base.Entity.Definition.NameT, Demand.Product.NameT);
+				}
+				storageFullNotification = EventNotification.CreateGroupable(S.Ticks, storageFullGroupId, UDB.Create(this, UDBT.IEvent, base.Entity.Definition.Preview, storageFullTitle), Priority.Low);
+				S.Sig.AddEvent.Send(storageFullNotification);
+			}
+		}
+
+		private void HideStorageFullNotification()
+		{
+			if (storageFullNotification != null)
+			{
+				S.Sig.RemoveEvent.Send(storageFullNotification);
+				storageFullNotification = null;
+			}
 		}
 
 		public float TickEnergy(EnergyState state, out float deficit)
@@ -837,7 +805,6 @@ namespace Sculptures.Components
 					showingUnconfiguredIcon = true;
 					ShowInfoIcon("Icons/Color/NotConfigured", T.InfoDeviceUnconfigured);
 				}
-				// Is not available for sculpting TODO
 				return 0f;
 			}
 			D.Ass(!Arrays.IsEmpty(ingredients), "Ingredients empty for {0}", Demand.Craftable.Id);
@@ -849,9 +816,23 @@ namespace Sculptures.Components
 			{
 				D.Err("Broken demand in a crafter: {0}", Demand);
 				StopProducing();
-				// Is not available for sculpting TODO
 				return 0f;
 			}
+			// Check available storage
+			if (producedSculpture != null) {
+				int pos = FindAvailableStorageTile(producedSculpture);
+				if (pos == Pos.Invalid) {
+					ShowStorageFullNotification();
+					if (!showingStorageFullIcon)
+					{
+						HideIcon();
+						showingStorageFullIcon = true;
+						ShowInfoIcon("Icons/Color/StorageFull", "sculpturebench.storage_full".T());
+					}
+					return 0f;
+				}
+			}
+			HideStorageFullNotification();
 			if (!isSculpting)
 			{
 				return 0f;
@@ -873,108 +854,113 @@ namespace Sculptures.Components
 			return 0f;
 		}
 
-		private void SpawnCraftable(Craftable craftable)
-		{
+		private void SpawnCraftable(Craftable craftable) {
 			Def def = craftable.ProductDef;
-			Tile.Damageable.AddWear();
 			D.Warn("Variations: " + def.HasVariations + "; " + def.Variations.Count);
-			Being being = Slots[0].ContainedBeing;
+			Being being = slots[0].ContainedBeing;
 			if (being == null) {
 				D.Err("No being in sculptor comp work slot when spawning craftable!");
 			}
-			if (def.HasVariations)
-			{
-				if (Demand.ColorId != null)
+			Tile sculptureTile;
+			if (producedSculpture != null) {
+				sculptureTile = producedSculpture;
+			} else {
+				if (def.HasVariations)
 				{
-					foreach (Def variation in def.Variations)
+					if (Demand.ColorId != null)
 					{
-						if (variation.ColorId == Demand.ColorId)
+						foreach (Def variation in def.Variations)
 						{
-							def = variation;
-							break;
+							if (variation.ColorId == Demand.ColorId)
+							{
+								def = variation;
+								break;
+							}
 						}
 					}
-				}
-				else
-				{
-					D.Warn("Def: " + def.Id + "; variations: " + def.Variations.Count);
-					// Get chance from 0-1
-					float efficiency = being.Skills.EfficiencyOf(SculpturesMod.SkillIdArtistic) * 0.5f;
-					if (being.Traits.HasTrait(TraitCreative.Id)) {
-						efficiency = Mathf.Max(efficiency + TraitCreative.SkillChanceAdd, 1f);
+					else
+					{
+						D.Warn("Def: " + def.Id + "; variations: " + def.Variations.Count);
+						CalculateEfficiency(being);
+						Dictionary<SculptureQuality, float> chanceDict = SculptureQualities.All.Values.ToDictionary(
+							keySelector: q => q,
+							elementSelector: q => q.CraftingChanceCurve.Evaluate(averageEfficiency)
+						);
+						SculptureQuality quality = S.Rng.WeightedFrom(chanceDict);
+						Def original = def;
+						def = original.Variations.Single(d => d.Id.EndsWith(quality.Id));
+						if (def == null) {
+							D.Err("No sculpture variation matches quality {0} for type {1}", quality.Id, original.Id);
+						}
+						D.Warn("Variation: " + def.Id + "; material: " + def.MatType);
 					}
-					Dictionary<SculptureQuality, float> chanceDict = SculptureQualities.All.Values.ToDictionary(
-						keySelector: q => q,
-						elementSelector: q => q.CraftingChanceCurve.Evaluate(efficiency)
-					);
-					SculptureQuality quality = S.Rng.WeightedFrom(chanceDict);
-					Def original = def;
-					def = original.Variations.Single(d => d.Id.EndsWith(quality.Id));
-					if (def == null) {
-						D.Err("No sculpture variation matches quality {0} for type {1}", quality.Id, original.Id);
-					}
-					D.Warn("Variation: " + def.Id + "; material: " + def.MatType);
 				}
+				sculptureTile = EntityUtils.CreatePrototype<Tile>(def);
 			}
-			if (def.IsBeing)
-			{
-				CmdSpawnBeing cmdSpawnBeing = new CmdSpawnBeing(EntityUtils.CenterOf(Tile.Transform.WorkSpot) + Rng.UInsideUnitCircle() * 0.25f, def, skipGreeting: false);
-				cmdSpawnBeing.Execute(S);
-				Persona persona = cmdSpawnBeing.Being.Persona.Persona;
-				persona.IsClone = persona.Species.IsBiological;
-				persona.Age = 0;
-				persona.BirthTick = S.Ticks;
-				if (persona.Species.Type == "Human")
-				{
-					The.AchievementTracker.Unlock("CloneHuman");
-				}
+			if (sculptureTile.HasComponent<CreatorInfoComp>()) {
+				sculptureTile.GetComponent<CreatorInfoComp>().SetCreators(sculptorIds.ToArray(), sculptorNames.ToArray());
 			}
-			else if (def.MatType != null)
-			{
-				int num = craftable.OutputMultiplier;
-				if (num < 1)
-				{
-					num = 1;
-				}
-				// MatStorageComp materialStorage = Tile.MaterialStorage;
-				// if (materialStorage != null && !materialStorage.IsFull)
-				// {
-				// 	Tile.MaterialStorage.Store(def.MatType, null, num, null);
-				// }
-				// else
-				// {
-					// def.ComponentConfigFor("CreatorInfo").SetProperty(new SerializableProperty
-					// {
-					// 	Key = "CreatorName",
-					// 	String = being.Persona.Name
-					// });
-					UnstoredMatComp pile = EntityUtils.SpawnRawMaterial(def.MatType, num, Tile.Transform.WorkSpot, 0f, skipCheck: true, allowMerge: false);
-					// Debug.Log("Object: " + pile.Obj);
-					// Debug.Log("Comp: " + pile.Obj.GetComponent<CreatorInfoComp>());
-					// Debug.Log("Name: " + being.Persona.Name);
-					// pile.Obj.GetComponent<CreatorInfoComp>().SetName(being.Persona.Name);
-				// }
+			// Is there room to place the sculpture?
+			int pos = FindAvailableStorageTile(sculptureTile);
+			if (pos == Pos.Invalid) {
+				D.Err("Cannot place tile {0}", sculptureTile);
+				// Save sculpture and show warning
+				producedSculpture = sculptureTile;
+				Progress = 0.99999f;
+				return;
 			}
-			else
-			{
-				S.CmdQ.Enqueue(new CmdSpawnObj(EntityUtils.CenterOf(Tile.Transform.WorkSpot) + Rng.UInsideUnitCircle() * 0.25f, def, force: true));
-			}
+			CmdPlaceTile cmd = new CmdPlaceTile(pos, sculptureTile, warn: false, instant: true);
+			cmd.Execute(S);
+				
 			Progress = 0f;
+			averageEfficiency = 0;
+			startedSculpting = 0;
 			for (int i = 0; i < ingredients.Length; i++)
 			{
 				Mat mat = ingredients[i];
 				mat.StackSize = 0;
 				ingredients[i] = mat;
 			}
-			UDB uDB = amountBlock;
-			if (uDB != null && uDB.IsShowing)
-			{
-				amountBlock.NeedsListRebuild = true;
-			}
 			S.Sig.EntityProduced.Send(Demand.Product, 1);
-			Demand.AmountProduced++;
 			Demand.AmountProducedThis++;
 			TotalProduced++;
+			Tile.Damageable.AddWear();
+		}
+
+		private int FindAvailableStorageTile(Tile forTile) {
+			int pos = Pos.Invalid;
+			foreach (Vector2 offset in sculptureStorageOffsets) {
+				pos = RotatedSculptureSpot(offset);
+				bool canPlace = CmdPlaceTile.CanPlace(pos, forTile, forTile.Transform.LayerId, warn: false);
+				// D.Warn("Can place tile at offset {0}: {1}", offset, canPlace);
+				if (canPlace) {
+					return pos;
+				} else {
+					pos = Pos.Invalid;
+				}
+			}
+			return pos;
+		}
+
+		private int RotatedSculptureSpot(Vector2 offset)
+		{
+			int offsetX = Mathf.RoundToInt(offset.x);
+			int offsetY = Mathf.RoundToInt(offset.y);
+			TileTransformComp ttc = base.Entity.GetComponent<TileTransformComp>();
+			switch (ttc.Rotation)
+			{
+			case Facing.Type.Down:
+				return Pos.NeighborAt(base.Entity.PosIdx, offsetX, offsetY);
+			case Facing.Type.Up:
+				return Pos.NeighborAt(base.Entity.PosIdx, ttc.Width - 1 - offsetX, ttc.Height - offsetY - 1);
+			case Facing.Type.Left:
+				return Pos.NeighborAt(base.Entity.PosIdx, offsetY, ttc.Width - offsetX - 1);
+			case Facing.Type.Right:
+				return Pos.NeighborAt(base.Entity.PosIdx, ttc.Height - offsetY - 1, offsetX);
+			default:
+				D.Err("Unhandled facing in workspot: {0}", ttc.Rotation);
+				return base.Entity.PosIdx;
+			}
 		}
 
 		public void OnAdvertLoad(Advert ad)
@@ -1122,7 +1108,7 @@ namespace Sculptures.Components
 		private void HideIcon()
 		{
 			HideInfoIcon();
-			showingGoalReachedIcon = false;
+			showingStorageFullIcon = false;
 			showingUnconfiguredIcon = false;
 		}
 
@@ -1142,17 +1128,17 @@ namespace Sculptures.Components
 			priorityBlock?.UpdateValue(priority);
 		}
 
-		public void BeginSculpting(Being worker)
-		{
+		public void BeginSculpting(Being worker){
+			startedSculpting = Progress;
+			AddSculptor(worker);
 			worker.Graphics.SetFacing(SpotRotation);
 			worker.Transform.TeleportTo(base.Tile.Position + offsets[(int)base.Tile.Transform.Rotation]);
 			// base.Tile.Light.SwitchLight(on: true);
 			isSculpting = true;
 		}
 
-		public bool Sculpt(Being worker)
-		{
-			// TODO Do sculpting work
+		public bool Sculpt(Being worker){
+			// Do sculpting work
 			worker.Graphics.Punch(Facing.ToOffset(SpotRotation, 1f), 0.15f, Rng.URange(0.8f, 1.2f), Rng.URange(0.8f, 1.2f));
 			if (Demand == null) {
 				return false;
@@ -1160,14 +1146,48 @@ namespace Sculptures.Components
 			if (!Tile.EnergyNode.IsConnected) {
 				return false;
 			}
-			return !IsMissingMaterials();
+			if (IsMissingMaterials()) {
+				return false;
+			}
+			return !showingStorageFullIcon;
 		}
 
-		public void EndSculpting(Being worker)
-		{
-			// base.Tile.Damageable.AddWear();
+		public void EndSculpting(Being worker){
+			if (Progress > 0 && Progress < 1f) {
+				// Calculate new average efficiency
+				CalculateEfficiency(worker);
+			}
 			// base.Tile.Light.SwitchLight(on: false);
 			isSculpting = false;
+		}
+
+		private void CalculateEfficiency(Being being) {
+			// Get chance from 0-1
+			float efficiency = being.Skills.EfficiencyOf(SculpturesMod.SkillIdArtistic) * 0.5f;
+			if (being.Traits.HasTrait(TraitCreative.Id)) {
+				efficiency = Mathf.Max(efficiency + TraitCreative.SkillChanceAdd, 1f);
+			}
+			float beingProgress = Progress - startedSculpting;
+			float beingContribution = efficiency * beingProgress;
+			averageEfficiency += beingContribution;
+		}
+
+		private void AddSculptor(Being being) {
+			if (sculptorIds == null) {
+				sculptorIds = new List<int>();
+			}
+			int id = being.Id;
+			if (sculptorIds.Contains(id)) {
+				return;
+			}
+			sculptorIds.Add(id);
+			if (sculptorNames == null) {
+				sculptorNames = new List<string>();
+			}
+			string name = being.Persona.Name;
+			if (!sculptorNames.Contains(name)) {
+				sculptorNames.Add(name);
+			}
 		}
 
 		private bool IsMissingMaterials() {

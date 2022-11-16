@@ -1,3 +1,4 @@
+using Sculptures.AI.Traits;
 using Sculptures.Components;
 using System;
 using System.Collections.Generic;
@@ -7,16 +8,14 @@ using Game.AI.Needs;
 using Game.Components;
 using Game.Constants;
 using Game.Data;
+using Game.Utils;
 using KL.Grid;
 using KL.Utils;
 using UnityEngine;
 
-namespace Sculptures.AI.Actions
-{
-	public sealed class ActSculpt : ActionExecutor
-	{
-		public enum Phase
-		{
+namespace Sculptures.AI.Actions{
+	public sealed class ActSculpt : ActionExecutor{
+		public enum Phase{
 			FindEquipment,
 			ReachEquipment,
 			UseEquipment,
@@ -57,23 +56,22 @@ namespace Sculptures.AI.Actions
 
 		private long sculptingSince;
 
+		private bool sculpting = false;
+
 		public override bool IsTiring => true;
 
 		public Phase CurrentPhase => phase;
 
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-		private static void Register()
-		{
+		private static void Register() {
 			ActionExecutor.RegisterExecutor("Sculpt", (Advert ad, Being being) => new ActSculpt(ad, being));
 		}
 
-		public ActSculpt(Advert ad, Being worker)
-			: base(ad, worker)
-		{
+		public ActSculpt(Advert ad, Being worker): base(ad, worker) {
 		}
 
-		public override void Cleanup()
-		{
+		public override void Cleanup() {
+			D.Warn("Sculpt cleanup for " + worker);
 			if (seekedEquipment != null)
 			{
 				seekedEquipment.EndSculpting(worker);
@@ -95,16 +93,16 @@ namespace Sculptures.AI.Actions
 				hungerNeed = null;
 			}
 			UnreserveSlot();
-			if (sculptingSince > 0)
+			if (sculpting && sculptingSince > 0)
 			{
 				long val = S.Ticks - sculptingSince;
 				val = Math.Max(val, MoodEffect.Duration1h);
 				worker.Mood.AddEffect(MoodEffect.Create(S.Ticks, val, "sculptures.created_art".T(), 6));
 			}
+			sculpting = false;
 		}
 
-		protected override void OnLoad(ComponentData data)
-		{
+		protected override void OnLoad(ComponentData data) {
 			seekedEquipment = data.GetComponent<ISculptingProvider>(S, "SeekedEquipment");
 			sculptingSince = data.GetLong("SculptingSince", sculptingSince);
 			int @int = data.GetInt("SlotIdx", 0);
@@ -125,8 +123,7 @@ namespace Sculptures.AI.Actions
 			}
 		}
 
-		public override void OnSave()
-		{
+		public override void OnSave() {
 			ComponentData vars = ad.Vars;
 			vars.SetInt("Phase", (int)phase);
 			vars.SetLong("SculptingSince", sculptingSince);
@@ -138,74 +135,69 @@ namespace Sculptures.AI.Actions
 			vars.SetInt("NavTarget", navTarget);
 		}
 
-		private void UnreserveSlot()
-		{
-			if (slot != null)
-			{
+		private void UnreserveSlot() {
+			D.Warn("Unreserve slot for " + worker);
+			if (slot != null) {
+				D.Warn("Slot is not null");
 				slot.Unreserve(worker);
-				if (slot.ContainedBeing != null)
-				{
+				D.Warn("Slot unreserved");
+				if (slot.ContainedBeing != null) {
 					slot.Remove(worker);
 				}
 				slot = null;
 			}
 		}
 
-		private bool ReserveSlot()
-		{
-			if (slot == null)
-			{
+		private bool ReserveSlot() {
+			D.Warn("Reserve slot for " + worker);
+			if (slot == null) {
+				D.Warn("Slot is null");
 				return false;
 			}
-			if (!slot.Reserve(worker))
-			{
+			if (!slot.Reserve(worker)) {
+				D.Warn("Could not reserve slot for " + worker);
 				slot = null;
 				return false;
 			}
 			return true;
 		}
 
-		protected override ExecutionResult DoWork()
-		{
-			if (subAction != null)
-			{
+		protected override ExecutionResult DoWork() {
+			D.Warn("Do sculpting work; subaction: " + subAction + "; phase: " + phase + "; worker: " + worker);
+			if (subAction != null) {
 				ExecutionResult result = subAction.Execute();
-				if (!result.IsFinished)
-				{
+				if (!result.IsFinished) {
 					return result;
 				}
-				if (!result.IsSuccess && seekedEquipment != null)
-				{
+				if (!result.IsSuccess && seekedEquipment != null) {
 					IgnoreEquipment(seekedEquipment);
 				}
 				subAction = null;
 				navTarget = 0;
 			}
-			switch (phase)
-			{
-			case Phase.FindEquipment:
-				return FindEquipment();
-			case Phase.ReachEquipment:
-				return ReachEquipment();
-			case Phase.UseEquipment:
-				return UseEquipment();
-			case Phase.FinishSculpting:
-				return FinishSculpting();
-			default:
-				D.Err("Unhandled phase: {0}", phase);
-				return Failure(T.AdRejUndefined);
+			switch (phase) {
+				case Phase.FindEquipment:
+					return FindEquipment();
+				case Phase.ReachEquipment:
+					return ReachEquipment();
+				case Phase.UseEquipment:
+					return UseEquipment();
+				case Phase.FinishSculpting:
+					return FinishSculpting();
+				default:
+					D.Err("Unhandled phase: {0}", phase);
+					return Failure(T.AdRejUndefined);
 			}
 		}
 
-		private ExecutionResult FindEquipment()
-		{
+		private ExecutionResult FindEquipment() {
+			D.Warn("Find equipment for " + worker);
 			slot = S.Sys.Slots.FindForDesignation<ISculptingProvider>(worker, SculpturesMod.SlotDesignationSculpting, ignoredEquipment, out var obj);
-			if (slot == null)
-			{
-				return Failure(T.AdRejLackingWorkoutEquipment); // TODO Change string
+			D.Warn("Find slot: " + slot);
+			if (slot == null) {
+				return Failure("sculpting.adrejected.lackequipment".T());
 			}
-			if (ReserveSlot())
-			{
+			if (ReserveSlot()) {
 				phase = Phase.ReachEquipment;
 				seekedEquipment = obj;
 				navTarget = obj.WorkSpot;
@@ -218,70 +210,59 @@ namespace Sculptures.AI.Actions
 
 		private ExecutionResult ReachEquipment()
 		{
-			if (!IsNearEquipment())
-			{
+			if (!IsNearEquipment()) {
 				IgnoreEquipment(seekedEquipment);
 				phase = Phase.FindEquipment;
 				return StillWorking;
 			}
-			if (!slot.Put(worker))
-			{
+			if (!slot.Put(worker)) {
 				return Failure(T.AdRejTargetUnavailable);
 			}
 			funNeed = worker.Needs.GetNeed(NeedId.Fun);
 			stressNeed = worker.Needs.GetNeed(NeedId.Stress);
 			purposeNeed = worker.Needs.GetNeed(NeedId.Purpose);
 			showerNeed = worker.Needs.GetNeed(NeedId.Shower, warn: false);
-			if (showerNeed != null)
-			{
+			if (showerNeed != null) {
 				showerRateBefore = showerNeed.DropRateMod;
 				showerNeed.DropRateMod = 1.5f;
 			}
 			restNeed = worker.Needs.GetNeed(NeedId.Rest, warn: false);
-			if (restNeed != null)
-			{
+			if (restNeed != null) {
 				restRateBefore = restNeed.DropRateMod;
 				restNeed.DropRateMod = 0.5f;
 			}
 			hungerNeed = worker.Needs.GetNeed(NeedId.Hunger, warn: false);
-			if (hungerNeed != null)
-			{
+			if (hungerNeed != null) {
 				hungerRateBefore = hungerNeed.DropRateMod;
 				hungerNeed.DropRateMod = 1.25f;
 			}
 			seekedEquipment.BeginSculpting(worker);
-			if (sculptingSince == 0L)
-			{
+			if (sculptingSince == 0L) {
 				sculptingSince = S.Ticks;
 			}
 			phase = Phase.UseEquipment;
 			return StillWorking;
 		}
 
-		private ExecutionResult UseEquipment()
-		{
+		private ExecutionResult UseEquipment() {
 			ISculptingProvider sculptingProvider = seekedEquipment;
-			if (sculptingProvider == null || !sculptingProvider.Entity.IsActive)
-			{
+			if (sculptingProvider == null || !sculptingProvider.Entity.IsActive) {
 				return Failure(T.AdRejTargetUnavailable);
 			}
-			if (!seekedEquipment.Sculpt(worker))
-			{
+			if (!seekedEquipment.Sculpt(worker)) {
 				phase = Phase.FinishSculpting;
 			}
-			else
-			{
+			else {
+				sculpting = true;
 				// Fun+, stress+, purpose+
-				if (S.Rng.Chance(0.5f))
-				{
+				if (S.Rng.Chance(0.5f)) {
 					stressNeed.Add(0.1f);
 				}
 				funNeed.Add(0.1f);
-				purposeNeed.Add(0.1f);
+				purposeNeed.Add(worker.Traits.HasTrait(TraitCreative.Id) ? 0.1f : 0.01f);
 				long num = S.Ticks - sculptingSince;
 				// 540 == 3 hours, 1440 == 8 hours
-				if (num > 540 && (num > 1440 || (funNeed.Value > 99f && stressNeed.Value > 99f)))
-				{
+				if (num > 540 && (num > 1440 || (funNeed.Value > 99f && stressNeed.Value > 99f))) {
 					phase = Phase.FinishSculpting;
 				} else {
 					worker.Skills.Advance(ad.SkillChecks);
@@ -290,13 +271,12 @@ namespace Sculptures.AI.Actions
 			return StillWorking;
 		}
 
-		private void IgnoreEquipment(ISculptingProvider e)
-		{
+		private void IgnoreEquipment(ISculptingProvider e) {
+			UnreserveSlot();
 			(ignoredEquipment ?? (ignoredEquipment = new HashSet<int>())).Add(e.EntityId);
 		}
 
-		private bool IsNearEquipment()
-		{
+		private bool IsNearEquipment() {
 			if (seekedEquipment == null)
 			{
 				return false;
@@ -304,8 +284,7 @@ namespace Sculptures.AI.Actions
 			return Pos.AreAdjacent(seekedEquipment.WorkSpot, worker.PosIdx);
 		}
 
-		private ExecutionResult FinishSculpting()
-		{
+		private ExecutionResult FinishSculpting() {
 			return Success;
 		}
 	}
