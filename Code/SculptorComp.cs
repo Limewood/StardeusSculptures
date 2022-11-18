@@ -214,8 +214,12 @@ namespace Sculptures.Components
 			}
 			orCreateData.SetFloat("AverageEfficiency", averageEfficiency);
 			orCreateData.SetFloat("StartedSculpting", startedSculpting);
-			orCreateData.SetIntSet("SculptorIds", sculptorIds.ToArray());
-			orCreateData.SetStringSet("SculptorNames", sculptorNames.ToArray());
+			if (sculptorIds != null) {
+				orCreateData.SetIntSet("SculptorIds", sculptorIds.ToArray());
+			}
+			if (sculptorNames != null) {
+				orCreateData.SetStringSet("SculptorNames", sculptorNames.ToArray());
+			}
 		}
 
 		protected override void OnLoad(ComponentData data)
@@ -1011,6 +1015,11 @@ namespace Sculptures.Components
 					sculptorComp.OnAdvertPriorityChange(craftPriority);
 					result = true;
 				}
+				if (sculptorComp.isStorageFullWarningsOn != isStorageFullWarningsOn)
+				{
+					sculptorComp.isStorageFullWarningsOn = isStorageFullWarningsOn;
+					result = true;
+				}
 				if (sculptorComp.Demand == Demand)
 				{
 					return result;
@@ -1051,6 +1060,15 @@ namespace Sculptures.Components
 		public void RelocateTo(Entity target)
 		{
 			CopyConfigTo(target.GetComponent<ICopyableComp>());
+			SculptorComp sculptorComp = target.GetComponent<SculptorComp>();
+			if (sculptorComp == null) return;
+			// sculptorComp.Progress = Progress;
+			sculptorComp.TotalProduced = TotalProduced;
+			sculptorComp.averageEfficiency = averageEfficiency;
+			sculptorComp.startedSculpting = startedSculpting;
+			sculptorComp.sculptorIds = sculptorIds;
+			sculptorComp.sculptorNames = sculptorNames;
+			// sculptorComp.UpdateProgressBar();
 		}
 
 		public void AfterInitDef(Def def, ComponentConfig config)

@@ -9,7 +9,7 @@ using KL.Utils;
 using UnityEngine;
 
 namespace Sculptures.Components {
-	public sealed class CreatorInfoComp : BaseComponent<CreatorInfoComp>, IUIDataProvider {
+	public sealed class CreatorInfoComp : BaseComponent<CreatorInfoComp>, IUIDataProvider, IRelocatable {
         private int[] creatorIds;
 		private string[] creatorNames;
         private UDB dataBlock;
@@ -77,6 +77,13 @@ namespace Sculptures.Components {
             creatorIds = ids;
 			creatorNames = names;
 		}
+
+        public void RelocateTo(Entity target) {
+			CreatorInfoComp creatorInfoComp = target.GetComponent<CreatorInfoComp>();
+			if (creatorInfoComp == null) return;
+            creatorInfoComp.creatorIds = creatorIds;
+            creatorInfoComp.creatorNames = creatorNames;
+        }
 
         private string GetCreatorTitle() {
             if (creatorIds == null) {

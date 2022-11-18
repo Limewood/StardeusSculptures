@@ -71,7 +71,6 @@ namespace Sculptures.AI.Actions{
 		}
 
 		public override void Cleanup() {
-			D.Warn("Sculpt cleanup for " + worker);
 			if (seekedEquipment != null)
 			{
 				seekedEquipment.EndSculpting(worker);
@@ -136,11 +135,8 @@ namespace Sculptures.AI.Actions{
 		}
 
 		private void UnreserveSlot() {
-			D.Warn("Unreserve slot for " + worker);
 			if (slot != null) {
-				D.Warn("Slot is not null");
 				slot.Unreserve(worker);
-				D.Warn("Slot unreserved");
 				if (slot.ContainedBeing != null) {
 					slot.Remove(worker);
 				}
@@ -149,13 +145,10 @@ namespace Sculptures.AI.Actions{
 		}
 
 		private bool ReserveSlot() {
-			D.Warn("Reserve slot for " + worker);
 			if (slot == null) {
-				D.Warn("Slot is null");
 				return false;
 			}
 			if (!slot.Reserve(worker)) {
-				D.Warn("Could not reserve slot for " + worker);
 				slot = null;
 				return false;
 			}
@@ -163,7 +156,6 @@ namespace Sculptures.AI.Actions{
 		}
 
 		protected override ExecutionResult DoWork() {
-			D.Warn("Do sculpting work; subaction: " + subAction + "; phase: " + phase + "; worker: " + worker);
 			if (subAction != null) {
 				ExecutionResult result = subAction.Execute();
 				if (!result.IsFinished) {
@@ -191,9 +183,7 @@ namespace Sculptures.AI.Actions{
 		}
 
 		private ExecutionResult FindEquipment() {
-			D.Warn("Find equipment for " + worker);
 			slot = S.Sys.Slots.FindForDesignation<ISculptingProvider>(worker, SculpturesMod.SlotDesignationSculpting, ignoredEquipment, out var obj);
-			D.Warn("Find slot: " + slot);
 			if (slot == null) {
 				return Failure("sculpting.adrejected.lackequipment".T());
 			}
