@@ -62,7 +62,7 @@ namespace Sculptures.Components {
                     if (being != null) {
                         creatorLine.WithIconClickFunction(delegate {
                             being.S.Sig.SelectEntity.Send(being);
-                        }).WithIconTint(being.Definition.UITint)
+                        }).WithIconTint(being.UITint)
                             .WithIconHoverFunction(delegate(bool selected) {
                                 EntityUtils.ShowEntityLink(null, being, selected);
                             });

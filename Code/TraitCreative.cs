@@ -13,7 +13,7 @@ namespace Sculptures.AI.Traits
 
 		public override float Rarity => 0.5f;
 
-		protected override string Icon => "Icons/Color/NoClothing";
+		protected override string Icon => "Icons/Color/Creative";
 
 		public static float SkillChanceAdd => 0.4f;
 

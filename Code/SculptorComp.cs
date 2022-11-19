@@ -359,7 +359,7 @@ namespace Sculptures.Components
 		}
 
 		public override bool IsCompatibleWith(Being being) {
-			return being.Skills.GetSkill(SculpturesMod.SkillIdArtistic) != null;
+			return being.Persona.Species.IsHumanoid && being.Skills.GetSkill(SculpturesMod.SkillIdArtistic, false) != null;
 		}
 
 		public override void OnLateReady(bool wasLoaded) {
@@ -1059,16 +1059,19 @@ namespace Sculptures.Components
 
 		public void RelocateTo(Entity target)
 		{
-			CopyConfigTo(target.GetComponent<ICopyableComp>());
 			SculptorComp sculptorComp = target.GetComponent<SculptorComp>();
-			if (sculptorComp == null) return;
-			// sculptorComp.Progress = Progress;
-			sculptorComp.TotalProduced = TotalProduced;
-			sculptorComp.averageEfficiency = averageEfficiency;
-			sculptorComp.startedSculpting = startedSculpting;
-			sculptorComp.sculptorIds = sculptorIds;
-			sculptorComp.sculptorNames = sculptorNames;
-			// sculptorComp.UpdateProgressBar();
+			if (sculptorComp != null) {
+				sculptorComp.Demand = Demand;
+				sculptorComp.Progress = Progress;
+				sculptorComp.TotalProduced = TotalProduced;
+				sculptorComp.averageEfficiency = averageEfficiency;
+				sculptorComp.startedSculpting = startedSculpting;
+				sculptorComp.sculptorIds = sculptorIds;
+				sculptorComp.sculptorNames = sculptorNames;
+				sculptorComp.ingredients = ingredients;
+				sculptorComp.producedSculpture = producedSculpture;
+			}
+			CopyConfigTo(target.GetComponent<ICopyableComp>());
 		}
 
 		public void AfterInitDef(Def def, ComponentConfig config)
