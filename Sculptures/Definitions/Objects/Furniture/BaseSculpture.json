@@ -3,6 +3,7 @@
     "ResearchValue" : 0,
     "Layer" : "Objects",
     "ParentId" : "BaseTile",
+    "SkipToolListing" : true,
     "IsAbstract" : true,
     "Researchable" : {
         "Prerequisites" : [ "Research/Sculpting" ]
@@ -40,15 +41,6 @@
                 { "Key" : "Difficulty", "Float" : 0.5 }
             ]
         },
-        { "Component" : "Reinstallable" },
-        {
-            "Component" : "Constructable",
-            "Properties" : [
-                { "Key" : "WorkAmount", "Int" : 100 },
-                { "Key" : "CanDragRow", "Bool" : true },
-                { "Key" : "SkillChecks", "StringSet": ["Construction" ] },
-                { "Key" : "SkillCheckAmounts", "IntSet" : [ 1 ] }
-            ]
-        }
+        { "Component" : "Reinstallable" }
     ]
 }

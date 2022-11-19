@@ -84,6 +84,7 @@ namespace Sculptures.Constants {
 					Def variation = constructableDef.CreateVariation(variationId);
 					variation.ResearchValue = 1;
 					variation.IsAbstract = false;
+					variation.SkipToolListing = true;
 					variation.LayerId = WorldLayer.ToId(variation.Layer);
 					ComponentConfig tileConfig = variation.ComponentConfigFor("TileGraphics");
 					tileConfig.SetProperty(new SerializableProperty
