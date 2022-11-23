@@ -214,12 +214,16 @@ namespace Sculptures.Components
 			}
 			orCreateData.SetFloat("AverageEfficiency", averageEfficiency);
 			orCreateData.SetFloat("StartedSculpting", startedSculpting);
+			int[] scIds = null;
 			if (sculptorIds != null) {
-				orCreateData.SetIntSet("SculptorIds", sculptorIds.ToArray());
+				scIds = sculptorIds.ToArray();
 			}
+			orCreateData.SetIntSet("SculptorIds", scIds);
+			string[] scNames = null;
 			if (sculptorNames != null) {
-				orCreateData.SetStringSet("SculptorNames", sculptorNames.ToArray());
+				scNames = sculptorNames.ToArray();
 			}
+			orCreateData.SetStringSet("SculptorNames", scNames);
 		}
 
 		protected override void OnLoad(ComponentData data)
@@ -915,7 +919,9 @@ namespace Sculptures.Components
 			}
 			CmdPlaceTile cmd = new CmdPlaceTile(pos, sculptureTile, warn: false, instant: true);
 			cmd.Execute(S);
-				
+			
+			sculptorIds = null;
+			sculptorNames = null;
 			Progress = 0f;
 			averageEfficiency = 0;
 			startedSculpting = 0;
