@@ -14,8 +14,8 @@
         "Rock"
     ],
 
-    "MinMaterials" : 2,
-    "MaxMaterials" : 3,
+    "MinMaterials" : 1,
+    "MaxMaterials" : 2,
 
     "MaterialSpawnRates" : [
         0.5,
@@ -26,10 +26,10 @@
     ],
 
     "MaterialAmounts" : [
-        { "x" : 50, "y" : 100 },
-        { "x" : 50, "y" : 100 },
-        { "x" : 50, "y" : 100 },
-        { "x" : 50, "y" : 100 },
-        { "x" : 100, "y" : 200 }
+        { "x" : 150, "y" : 300 },
+        { "x" : 500, "y" : 1000 },
+        { "x" : 500, "y" : 1000 },
+        { "x" : 500, "y" : 1000 },
+        { "x" : 1000, "y" : 2000 }
     ]
 }

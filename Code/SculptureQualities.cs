@@ -37,9 +37,10 @@ namespace Sculptures.Constants {
             SculptureQuality quality;
 			for (int i = 0; i < list.Count; i++) {
 				quality = list[i];
-				if (All.PutGet(quality.Id, quality) != null) {
+				if (All.TryGetValue(quality.Id, out var value)) {
 					D.Warn("SculptureQualities.All already has quality with same id: {0}!", quality.Id);
 				}
+				All[quality.Id] = quality;
 			}
 		}
 
@@ -49,7 +50,10 @@ namespace Sculptures.Constants {
 				id = Simple;
 			}
 			Load();
-			SculptureQuality quality = All.Get(id, null);
+			SculptureQuality quality = null;
+			if (All.TryGetValue(id, out var value)) {
+				quality = value;
+			}
 			D.Ass(quality != null, "Sculpture quality Type {0} is not defined! See Config/SculptureQualities folder", id);
 			return quality;
 		}
@@ -85,6 +89,7 @@ namespace Sculptures.Constants {
 					variation.ResearchValue = 1;
 					variation.IsAbstract = false;
 					variation.SkipToolListing = true;
+					variation.IsConstructable = true;
 					variation.LayerId = WorldLayer.ToId(variation.Layer);
 					ComponentConfig tileConfig = variation.ComponentConfigFor("TileGraphics");
 					tileConfig.SetProperty(new SerializableProperty

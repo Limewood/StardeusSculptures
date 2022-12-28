@@ -1,7 +1,7 @@
 {
     "Id" : "MetalRichPlanet",
     "CompatibleTypes" : [ "Planet" ],
-    "TypeSpawnRates" : [ 0.1 ],
+    "TypeSpawnRates" : [ 0.2 ],
     "AlienLifeChance" : 0.001,
     "MerchantChance" : 0,
     "AnomalyChance" : 0.001,
@@ -20,7 +20,7 @@
     ],
 
     "MinMaterials" : 1,
-    "MaxMaterials" : 3,
+    "MaxMaterials" : 2,
 
     "MaterialSpawnRates" : [
         0.3,

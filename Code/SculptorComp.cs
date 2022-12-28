@@ -352,7 +352,10 @@ namespace Sculptures.Components
 			Mat[] array = ingredients;
 			for (int i = 0; i < array.Length; i++) {
 				Mat mat = array[i];
-				UDB uDB2 = ingredientBlocks.Get(mat.Type, null);
+				UDB uDB2 = null;
+				if (ingredientBlocks.TryGetValue(mat.Type, out var value)) {
+					uDB2 = value;
+				}
 				if (uDB2 == null) {
 					// D.Err("Updating up block mismatch ingredients. Expected: {0}, Actual: {1}", D.Dump(ingredients), D.Dump(ingredientBlocks));
 				}

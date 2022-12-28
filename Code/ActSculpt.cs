@@ -24,6 +24,8 @@ namespace Sculptures.AI.Actions{
 
 		public const string ActType = "Sculpt";
 
+		public const long Duration1h = 180L;
+
 		public static readonly int TypeHash = Animator.StringToHash(ActType);
 
 		private Phase phase;
@@ -95,7 +97,7 @@ namespace Sculptures.AI.Actions{
 			if (sculpting && sculptingSince > 0)
 			{
 				long val = S.Ticks - sculptingSince;
-				val = Math.Max(val, MoodEffect.Duration1h);
+				val = Math.Max(val, Duration1h);
 				worker.Mood.AddEffect(MoodEffect.Create(S.Ticks, val, "sculptures.created_art".T(), 6));
 			}
 			sculpting = false;
