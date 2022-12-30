@@ -1195,8 +1195,20 @@ namespace Sculptures.Components
 			// Get chance from 0-1
 			float efficiency = being.Skills.EfficiencyOf(SculpturesMod.SkillIdArtistic) * 0.5f;
 			if (being.Traits.HasTrait(TraitCreative.Id)) {
-				efficiency = Mathf.Max(efficiency + TraitCreative.SkillChanceAdd, 1f);
+				efficiency = Mathf.Min(efficiency + TraitCreative.SkillChanceAdd, 1f);
 			}
+			float highSkill = 0;
+			float skillLevel = 0;
+			foreach (Skill skill in being.Skills.Skills.Values) {
+				if (skill.Type.IdHash == SculpturesMod.SkillIdArtistic) {
+					continue;
+				}
+				skillLevel = skill.Level / ((float) skill.MaxLevel) * 10f;
+				if (skill.Level > highSkill) {
+					highSkill = skill.Level;
+				}
+			}
+			efficiency = Mathf.Min(efficiency + highSkill * 0.01f, 1f);
 			float beingProgress = Progress - startedSculpting;
 			float beingContribution = efficiency * beingProgress;
 			averageEfficiency += beingContribution;

@@ -253,8 +253,8 @@ namespace Sculptures.AI.Actions{
 				funNeed.Add(0.1f);
 				purposeNeed.Add(worker.Traits.HasTrait(TraitCreative.Id) ? 0.1f : 0.01f);
 				long num = S.Ticks - sculptingSince;
-				// 540 == 3 hours, 1440 == 8 hours
-				if (num > 540 && (num > 1440 || (funNeed.Value > 99f && stressNeed.Value > 99f))) {
+				// 720 == 4 hours, 2160 == 12 hours
+				if (num > 720 && (num > 2160 || (funNeed.Value > 99f && stressNeed.Value > 99f))) {
 					phase = Phase.FinishSculpting;
 				} else {
 					worker.Skills.Advance(ad.SkillChecks);

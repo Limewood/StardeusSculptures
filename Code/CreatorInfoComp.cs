@@ -58,7 +58,7 @@ namespace Sculptures.Components {
                 int i=0;
                 foreach (int id in creatorIds) {
                     Being being = S.Beings.Find(id);
-                    UDB creatorLine = UDB.Create("slot", UDBT.IText, being?.Definition?.Preview, being?.Persona?.Name ?? creatorNames[i]);
+                    UDB creatorLine = UDB.Create("slot", UDBT.IText, being?.Definition?.Preview ?? "Icons/Color/Skull", being?.Persona?.Name ?? creatorNames[i]);
                     if (being != null) {
                         creatorLine.WithIconClickFunction(delegate {
                             being.S.Sig.SelectEntity.Send(being);

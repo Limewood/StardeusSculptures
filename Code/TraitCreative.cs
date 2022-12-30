@@ -15,7 +15,7 @@ namespace Sculptures.AI.Traits
 
 		protected override string Icon => "Icons/Color/Creative";
 
-		public static float SkillChanceAdd => 0.4f;
+		public static float SkillChanceAdd => 0.3f;
 
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
 		private static void Register()

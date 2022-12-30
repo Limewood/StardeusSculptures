@@ -46,6 +46,7 @@ obj.materials.limestone.desc,"Blocks of high quality limestone. Ideal for sculpt
 objects.devices.sculptingbench,Sculpting bench,,
 objects.devices.sculptingbench.desc,"A work station for making sculptures.",,
 sculpting.now,Sculpting {0},,
+act.Sculpt,Sculpting,,
 sculpt,"Sculpt",,
 skill.Artistic,Artistic,,
 research.sculpting,Sculpting,,
