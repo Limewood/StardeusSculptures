@@ -776,7 +776,7 @@ namespace Sculptures.Components
 				return;
 			}
 			// deficitEv.Clear();
-			if (S.Prefs.GetBool("warn.device.idle", Pref.HWarnDeviceIdle, def: true))
+			if (S.Prefs.GetBool("warn.device.idle", PrefH.WarnDeviceIdle, def: true))
 			{
 				if (storageFullGroupId == null)
 				{
