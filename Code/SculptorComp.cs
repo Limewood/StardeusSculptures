@@ -13,7 +13,6 @@ using Game.Constants;
 using Game.Data;
 using Game.Input;
 using Game.Research;
-using Game.Systems.Energy;
 using Game.UI;
 using Game.Utils;
 using KL.Collections;
@@ -24,7 +23,7 @@ using UnityEngine;
 
 namespace Sculptures.Components
 {
-	public sealed class SculptorComp : BaseSlotsComp<SculptorComp>, IUIDataProvider, IEnergyConsumer, IComponent, IAdvertProvider, ICopyableComp, IAdvertPriorityListener, IUIContextMenuProvider, IRelocatable, IAfterInitDef, IMatRequester, ISculptingProvider, ISlots
+	public sealed class SculptorComp : BaseSlotsComp<SculptorComp>, IUIDataProvider, IComponent, IAdvertProvider, ICopyableComp, IAdvertPriorityListener, IUIContextMenuProvider, IRelocatable, IAfterInitDef, IMatRequester, ISculptingProvider, ISlots, IUISubmenuProvider
 	{
 		private int level;
 
@@ -116,7 +115,7 @@ namespace Sculptures.Components
 			}
 		}
 
-		public bool IsCopyable => Tile.EnergyNode.IsConnected;
+		public bool IsCopyable => Tile.ENode.IsReachable;
 
 		public string CopyConfigText => Tile.Definition.NameT;
 
@@ -132,9 +131,15 @@ namespace Sculptures.Components
 
 		public int WorkSpot => base.Tile.Transform.WorkSpot;
 
-		public Facing.Type SpotRotation => Facing.Opposite(Tile.Transform.Rotation);
+		public override Facing.Type SpotRotation => Facing.Opposite(Tile.Transform.Rotation);
 
 		private static readonly StringBuilder tooltipSB = new StringBuilder();
+
+		public override bool HasSubmenuNow => true;
+
+		private string SculptingTitle = "Sculpting title";
+
+		public override string SubmenuTitle => SculptingTitle;
 
 		public override bool IsAvailable
 		{
@@ -228,6 +233,7 @@ namespace Sculptures.Components
 
 		protected override void OnLoad(ComponentData data)
 		{
+			SculptingTitle = "sculptor_comp.title".T();
 			Demand = CraftingDemand.Load(data);
 			if (Demand != null)
 			{
@@ -305,7 +311,7 @@ namespace Sculptures.Components
 
 		public new UDB GetUIBlock()
 		{
-			if (!Tile.IsConstructed || !Tile.EnergyNode.IsConnected)
+			if (!Tile.IsConstructed || !Tile.ENode.IsReachable)
 			{
 				return null;
 			}
@@ -763,8 +769,8 @@ namespace Sculptures.Components
 			}
 			RebuildIngredientsReq();
 			CancelHaulingAd("Has missing ingredients");
-			currentAd = CreateAdvert("Hauling", "Icons/Color/Store", T.HaulIngredients).WithPromise(NeedId.Purpose, 5).MarkAsWork().WithPriority(craftPriority)
-				.AndThen("GatherRawMaterials", T.GatherMaterials, NeedId.Purpose, 5)
+			currentAd = CreateAdvert("Hauling", "Icons/Color/Store", T.HaulIngredients).WithPromise(NeedIdH.Purpose, 5).MarkAsWork().WithPriority(craftPriority)
+				.AndThen("GatherRawMaterials", T.GatherMaterials, NeedIdH.Purpose, 5)
 				.Publish();
 			return false;
 		}
@@ -800,9 +806,19 @@ namespace Sculptures.Components
 			}
 		}
 
-		public float TickEnergy(EnergyState state, out float deficit)
-		{
-			deficit = 0f;
+		private ElectricNodeComp eNode;
+
+		public override void Receive(IComponent sender, int message) {
+            if (message == MsgIdH.ElectricNodeAdded) {
+                if (sender is ElectricNodeComp enode) {
+                    eNode = enode;
+                    enode.AddAfterTick(this, AfterTickGrid);
+                    AfterTickGrid();
+                }
+            }
+        }
+
+		public void AfterTickGrid() {
 			if (Demand == null)
 			{
 				if (currentAd != null)
@@ -816,18 +832,21 @@ namespace Sculptures.Components
 					showingUnconfiguredIcon = true;
 					ShowInfoIcon("Icons/Color/NotConfigured", T.InfoDeviceUnconfigured);
 				}
-				return 0f;
+				eNode.SetConsumerWantedInput(0f);
+				return;
 			}
 			D.Ass(!Arrays.IsEmpty(ingredients), "Ingredients empty for {0}", Demand.Craftable.Id);
 			if (!CheckMissingIngredients(checkIfProducedEnough: false))
 			{
-				return 0f;
+				eNode.SetConsumerWantedInput(0f);
+				return;
 			}
 			if (Demand.Craftable == null)
 			{
 				D.Err("Broken demand in a crafter: {0}", Demand);
 				StopProducing();
-				return 0f;
+				eNode.SetConsumerWantedInput(0f);
+				return;
 			}
 			// Check available storage
 			if (producedSculpture != null) {
@@ -840,29 +859,31 @@ namespace Sculptures.Components
 						showingStorageFullIcon = true;
 						ShowInfoIcon("Icons/Color/StorageFull", "sculpturebench.storage_full".T());
 					}
-					return 0f;
+					eNode.SetConsumerWantedInput(0f);
+					return;
 				}
 			}
 			HideStorageFullNotification();
 			if (!isSculpting)
 			{
-				return 0f;
+				eNode.SetConsumerWantedInput(0f);
+				return;
 			}
 			float energyCost = Demand.Craftable.EnergyCost;
-			if (state.TryConsume(energyCost, this, Demand.craftableId))
-			{
-				float num = (float)state.TicksPassed / 180f / Demand.Craftable.ProductionTimeHours;
+			if (eNode.IsConsuming) {
+				float num = (float) 10f / Consts.TicksPerHour / Demand.Craftable.ProductionTimeHours;
 				num *= Tunable.Float(783785663) * craftingSpeedMultiplier;
 				Progress += num;
 				if (Progress >= 1f)
 				{
 					SpawnCraftable(Demand.Craftable);
+					eNode.SetConsumerWantedInput(0f);
 				}
 				UpdateUIBlock(wasUpdated: true);
-				return energyCost;
+				return;
+			} else {
+				eNode.SetConsumerWantedInput(energyCost);
 			}
-			deficit = energyCost;
-			return 0f;
 		}
 
 		private void SpawnCraftable(Craftable craftable) {
@@ -1060,7 +1081,7 @@ namespace Sculptures.Components
 
 		public void ContextActions(List<UDB> res)
 		{
-			if (Tile.IsConstructed && Tile.EnergyNode.IsConnected)
+			if (Tile.IsConstructed && Tile.ENode.IsReachable)
 			{
 				GetUIDetails(res);
 			}
@@ -1173,7 +1194,7 @@ namespace Sculptures.Components
 			if (Demand == null) {
 				return false;
 			}
-			if (!Tile.EnergyNode.IsConnected) {
+			if (!Tile.ENode.IsReachable) {
 				return false;
 			}
 			if (IsMissingMaterials()) {

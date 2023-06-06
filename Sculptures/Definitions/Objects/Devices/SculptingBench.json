@@ -30,7 +30,12 @@
                 { "Key" : "Aesthetics", "Float" : 1 }
             ]
         },
-        { "Component" : "EnergyNode" },
+        {
+            "Component" : "ElectricNode",
+            "Properties" : [
+                { "Key" : "IsConsumer", "Bool" : true }
+            ]
+        },
         {
             "Component" : "TileGraphics",
             "Properties" : [

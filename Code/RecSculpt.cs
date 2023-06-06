@@ -30,8 +30,8 @@ namespace Sculptures.AI.Recreation{
 		public override bool IsAvailableFor(Being being, out float priority) {
 			priority = 0f;
 			if (being.S.Sys.Slots.HasFreeFor(SculpturesMod.SlotDesignationSculpting, being)) {
-				priority = 100f - being.Needs.GetNeed(NeedId.Stress).Value;
-				priority += 100f - being.Needs.GetNeed(NeedId.Fun).Value;
+				priority = 100f - being.Needs.GetNeed(NeedIdH.Stress).Value;
+				priority += 100f - being.Needs.GetNeed(NeedIdH.Fun).Value;
 				// Add to priority if Artistic trait
 				if (being.Traits.HasTrait(TraitCreative.Id)) {
 					priority += 100f;
@@ -45,11 +45,11 @@ namespace Sculptures.AI.Recreation{
 			ad.WithSkillCheck(SculpturesMod.SkillIdArtistic, 1)
 				.WithPromises(new Reward[2] {
 					new Reward {
-						NeedHash = NeedId.Purpose,
+						NeedHash = NeedIdH.Purpose,
 						Amount = 5
 					},
 					new Reward {
-						NeedHash = NeedId.Stress,
+						NeedHash = NeedIdH.Stress,
 						Amount = 3
 					}
 				});

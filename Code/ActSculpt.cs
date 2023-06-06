@@ -210,20 +210,20 @@ namespace Sculptures.AI.Actions{
 			if (!slot.Put(worker)) {
 				return Failure(T.AdRejTargetUnavailable);
 			}
-			funNeed = worker.Needs.GetNeed(NeedId.Fun);
-			stressNeed = worker.Needs.GetNeed(NeedId.Stress);
-			purposeNeed = worker.Needs.GetNeed(NeedId.Purpose);
-			showerNeed = worker.Needs.GetNeed(NeedId.Shower, warn: false);
+			funNeed = worker.Needs.GetNeed(NeedIdH.Fun);
+			stressNeed = worker.Needs.GetNeed(NeedIdH.Stress);
+			purposeNeed = worker.Needs.GetNeed(NeedIdH.Purpose);
+			showerNeed = worker.Needs.GetNeed(NeedIdH.Shower, warn: false);
 			if (showerNeed != null) {
 				showerRateBefore = showerNeed.DropRateMod;
 				showerNeed.DropRateMod = 1.5f;
 			}
-			restNeed = worker.Needs.GetNeed(NeedId.Rest, warn: false);
+			restNeed = worker.Needs.GetNeed(NeedIdH.Rest, warn: false);
 			if (restNeed != null) {
 				restRateBefore = restNeed.DropRateMod;
 				restNeed.DropRateMod = 0.5f;
 			}
-			hungerNeed = worker.Needs.GetNeed(NeedId.Hunger, warn: false);
+			hungerNeed = worker.Needs.GetNeed(NeedIdH.Hunger, warn: false);
 			if (hungerNeed != null) {
 				hungerRateBefore = hungerNeed.DropRateMod;
 				hungerNeed.DropRateMod = 1.25f;

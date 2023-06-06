@@ -9,10 +9,15 @@ using KL.Utils;
 using UnityEngine;
 
 namespace Sculptures.Components {
-	public sealed class CreatorInfoComp : BaseComponent<CreatorInfoComp>, IUIDataProvider, IRelocatable {
+	public sealed class CreatorInfoComp : BaseComponent<CreatorInfoComp>, IUIDataProvider, IRelocatable, IUISubmenuProvider {
         private int[] creatorIds;
 		private string[] creatorNames;
         private UDB dataBlock;
+        private string CreatorInfoTitle = "Creators title";
+
+		public bool HasSubmenuNow => true;
+
+		public string SubmenuTitle => CreatorInfoTitle;
 
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
 		private static void Register() {
@@ -29,6 +34,7 @@ namespace Sculptures.Components {
         }
 
         protected override void OnLoad(ComponentData data) {
+            CreatorInfoTitle = "creator.creators".T();
             creatorIds = data.GetIntSet("CreatorIds", null);
             creatorNames = data.GetStringSet("CreatorNames", null);
         }
@@ -50,11 +56,6 @@ namespace Sculptures.Components {
 
         public void GetUIDetails(List<UDB> res) {
             if (creatorIds != null && creatorIds.Length > 1) {
-                res.Add(UDB.Create(this,
-                        UDBT.DText,
-                        IconId.CPersona,
-                        "creator.creators".T()));
-                
                 int i=0;
                 foreach (int id in creatorIds) {
                     Being being = S.Beings.Find(id);
