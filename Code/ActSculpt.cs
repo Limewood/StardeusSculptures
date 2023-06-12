@@ -109,7 +109,7 @@ namespace Sculptures.AI.Actions{
 			int @int = data.GetInt("SlotIdx", 0);
 			if (@int != 0)
 			{
-				slot = S.Sys.Slots.Get(@int);
+				slot = S.Sys.Slots.Get(SculpturesMod.SlotDesignationSculpting, @int);
 				ReserveSlot();
 			}
 			navTarget = data.GetInt("NavTarget", 0);
