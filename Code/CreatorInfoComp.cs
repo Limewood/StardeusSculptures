@@ -43,7 +43,7 @@ namespace Sculptures.Components {
             dataBlock ??= UDB.Create(this,
                 UDBT.IText,
                 IconId.CPersona,
-                "creator.title".T(GetCreatorTitle()));
+                "creator.title".T(GetCreatorTitle())).WithGroupId(UDBGH.Stats);
             UpdateUIBlock(false);
             return dataBlock;
         }

@@ -1,5 +1,6 @@
 {
     "Id" : "Artistic",
     "IconId" : "Icons/Color/Artistic",
-    "LevelUpRate" : 0.01
+    "LevelUpRate" : 0.01,
+    "Importance" : 0.5
 }

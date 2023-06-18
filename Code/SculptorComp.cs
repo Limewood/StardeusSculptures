@@ -317,7 +317,7 @@ namespace Sculptures.Components
 			}
 			if (dataBlock == null)
 			{
-				dataBlock = UDB.Create(this, UDBT.IText, null);
+				dataBlock = UDB.Create(this, UDBT.IText, null).WithGroupId(UDBGH.Management);
 			}
 			UpdateUIBlock(wasUpdated: false);
 			return dataBlock;
