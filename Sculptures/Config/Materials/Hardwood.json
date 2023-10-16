@@ -3,7 +3,14 @@
     "IsComposite" : true,
     "NameKey" : "material.Hardwood",
     "IconId" : "Obj/Materials/Hardwood",
+    "ProcessableDefId" : "Obj/Materials/Hardwood",
     "Property" : "Solid",
-    "EnergyOutput" : 400.0,
-    "Rarity" : 5
+    "DepositType" : "Organic",
+    "IsDepositWithDepth" : false,
+    "DepositCollectKey" : "verb.collect",
+    "MiningDifficulty" : 32.0,
+    "InternalValue" : 30.0,
+    "EnergyOutput" : 600.0,
+    "MatRarity" : 1,
+    "Rarity" : 15
 }

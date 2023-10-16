@@ -1,7 +1,7 @@
 {
     "Id" : "Obj/Materials/Hardwood",
     "Type" : "CFD",
-    "Groups" : [ "Organic" ],
+    "Groups" : [ "Organic", "RareMaterial" ],
     "Value" : 200.0,
     "Rarity" : 0.3,
     "MerchantAmountMax" : 10,

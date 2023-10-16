@@ -1,15 +1,22 @@
 {
-    "Id" : "Research/Sculpting",
+    "Id" : "Research/Habitation/Sculpting",
     "Tier" : 2,
     "IsAbstract" : true,
     "PreviewIcon" : "Icons/Color/Sculpt",
     "Researchable" : {
         "IsTreeNode" : true,
-        "Energy" : 60,
-        "Memory" : 8,
-        "Storage" : 16,
         "Prerequisites" : [
-            "Research/Furniture"
+            "Research/Habitation/Furniture"
+        ],
+        "DatoidCosts" : [
+            {
+                "TypeId" : "DatoidBasic",
+                "StackSize" : 7
+            },
+            {
+                "TypeId" : "DatoidPhyto",
+                "StackSize" : 5
+            }
         ]
     }
 }

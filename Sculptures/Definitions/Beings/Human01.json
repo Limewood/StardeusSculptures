@@ -15,17 +15,17 @@
             "Properties" : [
                 { "Key" : "Type", "String" : "NutrientSource" },
                 { "Key" : "Level", "Int" : 1 },
-                { "Key" : "ProcessingTimeHours", "Float" : 4 },
+                { "Key" : "ProcessingTimeHours", "Float" : 18 },
                 { "Key" : "EnergyCost", "Int" : 10 },
                 { "Key" : "AutoSpawn", "Bool" : false },
                 { "Key" : "DropAmountOnDestroy", "Float" : 0.8 },
                 { "Key" : "AdIcon", "String" : "Icons/Color/Knife" },
-                { "Key" : "NotBatchable", "Bool" : true },
                 {
                     "Key" : "Output",
                     "RawMaterials" : [
                         { "TypeId" : "Protein", "StackSize" : 15 },
                         { "TypeId" : "Carbon", "StackSize" : 5 },
+                        { "TypeId" : "Leather", "StackSize" : 5 },
                         { "TypeId" : "Water" ,"StackSize" : 10 }
                     ]
                 }
@@ -45,8 +45,7 @@
                 { "Key" : "IsSelfPreserving", "Bool" : true },
                 { "Key" : "ReactsToEmergencySiren", "Bool" : true },
                 { "Key" : "IsRoamAnchored", "Bool" : false },
-                { "Key" : "RoamChance", "Float" : 0.8 },
-                { "Key" : "TaskVariation", "Int" : 2 }
+                { "Key" : "RoamChance", "Float" : 0.8 }
             ]
         },
         {
@@ -60,12 +59,6 @@
             "Properties" : [
                 { "Key" : "CanAffectSafety", "Bool" : true },
                 { "Key" : "Slots", "StringSet" : [ "Body", "BodyCasual", "Head", "HeadCasual", "Weapon" ] }
-            ]
-        },
-        {
-            "Component" : "Flammable",
-            "Properties" : [
-                { "Key" : "DamageFireChance", "Float" : 0 }
             ]
         },
         { "Component" : "Mood" },
@@ -101,7 +94,7 @@
                     "StringSet" : [
                         null,
                         null,
-                        "WeaponJitter",
+                        null,
                         null,
                         null,
                         null
@@ -143,7 +136,7 @@
         {
             "Component" : "Navigation",
             "Properties" : [
-                { "Key" : "MaxSpeed", "Float" : 0.7 },
+                { "Key" : "MaxSpeed", "Float" : 0.85 },
                 { "Key" : "Acceleration", "Float" : 0.25 }
             ]
         },
@@ -154,7 +147,6 @@
                     "Key" : "Skills",
                     "StringSet" : [
                         "Construction",
-                        "Repair",
                         "Science",
                         "Cleaning",
                         "Operate",
@@ -170,14 +162,12 @@
                         10,
                         10,
                         10,
-                        10,
                         10
                     ]
                 },
                 {
                     "Key" : "InitialSkillRanges",
                     "StringSet" : [
-                        "1-4",
                         "1-4",
                         "4-9",
                         "1-9",

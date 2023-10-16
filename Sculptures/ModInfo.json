@@ -3,7 +3,7 @@
     "SteamWorkshop" : true,
     "Name" : "Sculptures",
     "Description" : "Let your colonists craft sculptures as a recreational activity. As their Artistic skill increases, the chance that they will create a masterpiece increases.\n\nAdds Hardwood and Limestone as materials that can be found on some planets. With these materials sculptures can be crafted at the Sculpting Bench, but only if your colonists like sculpting in their spare time.\n\nAdds several qualities of sculptures in both materials, which are created next to the bench and can be moved. The names of their creators are inscribed on the sculptures.\n\nAdds the Artistic skill and the Creative trait. Creative colonists are naturally better at sculpting and prefer sculpting over other recreational activities.\n\nResearch the Sculpting technology to start sculpting and good luck!",
-    "ModVersion" : "1.0.13",
-    "GameVersion" : "0.9.6",
+    "ModVersion" : "1.0.14",
+    "GameVersion" : "0.10.1",
     "Dependencies" : [ "Core" ]
 }

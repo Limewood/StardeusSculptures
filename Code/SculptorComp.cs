@@ -23,7 +23,7 @@ using UnityEngine;
 
 namespace Sculptures.Components
 {
-	public sealed class SculptorComp : BaseSlotsComp<SculptorComp>, IUIDataProvider, IComponent, IAdvertProvider, ICopyableComp, IAdvertPriorityListener, IUIContextMenuProvider, IRelocatable, IAfterInitDef, IMatRequester, ISculptingProvider, ISlots, IUISubmenuProvider
+	public sealed class SculptorComp : BaseSlotsComp<SculptorComp>, IUIDataProvider, IComponent, IAdvertProvider, ICopyableComp, IAdvertPriorityListener, IUIContextMenuProvider, IRelocatable, IAfterInitDef, IMatRequester, ISculptingProvider, ISlots, IUISubmenuProvider, ICanBeIdle
 	{
 		private int level;
 
@@ -47,11 +47,15 @@ namespace Sculptures.Components
 
 		private float craftingSpeedMultiplier;
 
+		private bool isIdleWarningsOn;
+
 		private bool isStorageFullWarningsOn;
 
 		public HashSet<string> CompatibleTypes;
 
 		private UDB priorityBlock;
+
+		private UDB idleWarnBlock;
 
 		private UDB storageFullBlock;
 
@@ -78,6 +82,16 @@ namespace Sculptures.Components
 		private bool showingUnconfiguredIcon;
 
 		private bool showingStorageFullIcon;
+
+		private bool isShowingIdle;
+
+		public string IdleCategory => Tile.Definition.NameT;
+
+		public Tile DeviceTile => Tile;
+
+		public Def ProductDef => Demand?.Product;
+
+		public string IdleTooltip => $"{T.InfoProdGoalReached}<br>{Demand.AmountWanted}<br>{T.Owned}: {S.Sys.Inventory.CountOf(Demand.Product)}";
 
 		private bool isSculpting = false;
 
@@ -173,15 +187,18 @@ namespace Sculptures.Components
 			}
 		}
 
+		public string DeviceCategory => T.MenuProduction;
+
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
 		private static void Register() {
 			BaseComponent<SculptorComp>.AddComponentPrototype(new SculptorComp());
 		}
 
 		protected override void OnConfig() {
-			deficitEv = new MatDeficitEventHolder(base.Entity, this);
+			deficitEv = new MatDeficitEventHolder(Tile, this, DeviceCategory);
 			level = base.Config.GetInt("Level");
 			craftPriority = base.Config.GetInt("DefaultPriority", 5);
+			isIdleWarningsOn = base.Config.GetBool("IdleWarnDefault", def: true);
 			isStorageFullWarningsOn = base.Config.GetBool("StorageFullWarnDefault", def: true);
 			CompatibleTypes = new HashSet<string>(base.Config.GetStringSet("CompatibleTypes"));
 			string @string = base.Config.GetString("UIItemIcon", null);
@@ -207,6 +224,7 @@ namespace Sculptures.Components
 			orCreateData.SetInt("Priority", craftPriority);
 			orCreateData.SetInt("TotalProd", TotalProduced);
 			orCreateData.SetBool("StorageFullWarn", isStorageFullWarningsOn);
+			orCreateData.SetBool("IdleWarn", isIdleWarningsOn);
 			CraftingDemand.Save(Demand, orCreateData);
 			if (Demand != null)
 			{
@@ -248,6 +266,7 @@ namespace Sculptures.Components
 					VerifyIngredients();
 				}
 			}
+			isIdleWarningsOn = data.GetBool("IdleWarn", isIdleWarningsOn);
 			isStorageFullWarningsOn = data.GetBool("StorageFullWarn", isStorageFullWarningsOn);
 			craftPriority = data.GetInt("Priority", craftPriority);
 			TotalProduced = data.GetInt("TotalProd", 0);
@@ -557,6 +576,12 @@ namespace Sculptures.Components
 					});
 			}
 			blocks.Add(priorityBlock);
+			if (idleWarnBlock == null)
+			{
+				idleWarnBlock = UDB.Create(this, UDBT.DTextBtn, null, T.DeviceWarnIfIdle).WithText2(T.Toggle).WithClickFunction(ToggleDeviceIdle);
+			}
+			UpdateDeviceIdleBlock();
+			blocks.Add(idleWarnBlock);
 			if (storageFullBlock == null) {
 				storageFullBlock = UDB.Create(this, UDBT.DTextBtn, null, "sculpturebench.warn_if_storage_full".T()).WithText2(T.Toggle).WithClickFunction(ToggleShowStorageFull);
 			}
@@ -575,6 +600,34 @@ namespace Sculptures.Components
 				CurrentAdvert.WithPriority(craftPriority);
 			}
 			priorityBlock.UpdateValue(craftPriority);
+		}
+
+		private void UpdateDeviceIdleBlock()
+		{
+			if (isIdleWarningsOn)
+			{
+				idleWarnBlock.UpdateIcon("Icons/Color/Check");
+				idleWarnBlock.UpdateText(T.On);
+			}
+			else
+			{
+				idleWarnBlock.UpdateIcon("Icons/Color/Cross");
+				idleWarnBlock.UpdateText(T.Off);
+			}
+		}
+
+		private void ToggleDeviceIdle()
+		{
+			if (isIdleWarningsOn)
+			{
+				isIdleWarningsOn = false;
+				HideIdleNotification();
+			}
+			else
+			{
+				isIdleWarningsOn = true;
+			}
+			UpdateDeviceIdleBlock();
 		}
 
 		private void UpdateStorageFullBlock()
@@ -775,6 +828,25 @@ namespace Sculptures.Components
 			return false;
 		}
 
+		private void ShowIdleNotification()
+		{
+			if (!isShowingIdle && isIdleWarningsOn)
+			{
+				isShowingIdle = true;
+				deficitEv.Clear();
+				S.Sig.IdleChanged.Send(this, p2: true);
+			}
+		}
+
+		private void HideIdleNotification()
+		{
+			if (isShowingIdle)
+			{
+				isShowingIdle = false;
+				S.Sig.IdleChanged.Send(this, p2: false);
+			}
+		}
+
 		private void ShowStorageFullNotification()
 		{
 			if (!isStorageFullWarningsOn || storageFullNotification != null)
@@ -782,7 +854,7 @@ namespace Sculptures.Components
 				return;
 			}
 			// deficitEv.Clear();
-			if (S.Prefs.GetBool("warn.device.idle", PrefH.WarnDeviceIdle, def: true))
+			if (isIdleWarningsOn)
 			{
 				if (storageFullGroupId == null)
 				{
@@ -834,6 +906,11 @@ namespace Sculptures.Components
 				}
 				eNode.SetConsumerWantedInput(0f);
 				return;
+			} else {
+				if (isShowingIdle)
+				{
+					HideIdleNotification();
+				}
 			}
 			D.Ass(!Arrays.IsEmpty(ingredients), "Ingredients empty for {0}", Demand.Craftable.Id);
 			if (!CheckMissingIngredients(checkIfProducedEnough: false))

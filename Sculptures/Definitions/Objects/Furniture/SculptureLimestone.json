@@ -6,7 +6,7 @@
     "IsAbstract" : true,
     "Researchable" : {
         "Prerequisites" : [
-            "Research/Sculpting"
+            "Research/Habitation/Sculpting"
         ]
     },
     "Components" : [

@@ -6,7 +6,7 @@
     "SkipToolListing" : true,
     "IsAbstract" : true,
     "Researchable" : {
-        "Prerequisites" : [ "Research/Sculpting" ]
+        "Prerequisites" : [ "Research/Habitation/Sculpting" ]
     },
     "Components" : [
         {
@@ -24,7 +24,7 @@
         {
             "Component" : "Flammable",
             "Properties" : [
-                { "Key" : "DamageFireChance", "Float" : 0 }
+                { "Key" : "FireChance", "Float" : 0 }
             ]
         },
         {

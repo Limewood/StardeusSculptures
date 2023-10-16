@@ -1,7 +1,7 @@
 {
     "Id" : "Obj/Materials/Limestone",
     "Type" : "CFD",
-    "Groups" : [ "Mineral", "Ore" ],
+    "Groups" : [ "Mineral", "Ore", "RareMaterial" ],
     "Value" : 250.0,
     "Rarity" : 0.2,
     "MerchantAmountMax" : 10,

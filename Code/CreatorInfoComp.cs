@@ -13,11 +13,10 @@ namespace Sculptures.Components {
         private int[] creatorIds;
 		private string[] creatorNames;
         private UDB dataBlock;
-        private string CreatorInfoTitle = "Creators title";
 
 		public bool HasSubmenuNow => true;
 
-		public string SubmenuTitle => CreatorInfoTitle;
+		public string SubmenuTitle => "creator.creators".T();
 
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
 		private static void Register() {
@@ -34,7 +33,6 @@ namespace Sculptures.Components {
         }
 
         protected override void OnLoad(ComponentData data) {
-            CreatorInfoTitle = "creator.creators".T();
             creatorIds = data.GetIntSet("CreatorIds", null);
             creatorNames = data.GetStringSet("CreatorNames", null);
         }

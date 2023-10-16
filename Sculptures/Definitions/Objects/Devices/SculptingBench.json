@@ -4,7 +4,7 @@
     "ParentId" : "Objects/Devices/BaseDevice",
     "Researchable" : {
         "Prerequisites" : [
-            "Research/Sculpting"
+            "Research/Habitation/Sculpting"
         ]
     },
     "Components" : [
